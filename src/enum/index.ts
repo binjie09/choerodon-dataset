@@ -1,11 +1,11 @@
-export const enum TimeUnit {
+export enum TimeUnit {
   'hour' = 'h',
   'minute' = 'm',
   'second' = 's',
   'a' = 'a',
 }
 
-export const enum ColumnAlign {
+export enum ColumnAlign {
   left = 'left',
   center = 'center',
   right = 'right',

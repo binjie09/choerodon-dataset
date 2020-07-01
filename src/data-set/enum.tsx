@@ -1,4 +1,4 @@
-export const enum DataSetEvents {
+export enum DataSetEvents {
   query = 'query',
   beforeLoad = 'beforeLoad',
   beforeAppend = 'beforeAppend',
@@ -23,25 +23,25 @@ export const enum DataSetEvents {
   reset = 'reset',
 }
 
-export const enum DataSetSelection {
+export enum DataSetSelection {
   single = 'single',
   multiple = 'multiple',
 }
 
-export const enum DataSetStatus {
+export enum DataSetStatus {
   loading = 'loading',
   submitting = 'submitting',
   ready = 'ready',
 }
 
-export const enum RecordStatus {
+export enum RecordStatus {
   delete = 'delete',
   update = 'update',
   add = 'add',
   sync = 'sync',
 }
 
-export const enum FieldType {
+export enum FieldType {
   auto = 'auto',
   boolean = 'boolean',
   number = 'number',
@@ -61,36 +61,36 @@ export const enum FieldType {
   reactNode = 'reactNode',
 }
 
-export const enum SortOrder {
+export enum SortOrder {
   asc = 'asc',
   desc = 'desc',
 }
 
-export const enum BooleanValue {
+export enum BooleanValue {
   trueValue = 'trueValue',
   falseValue = 'falseValue',
 }
 
-export const enum FieldIgnore {
+export enum FieldIgnore {
   always = 'always',
   clean = 'clean',
   never = 'never',
 }
 
-export const enum FieldTrim {
+export enum FieldTrim {
   both = 'both',
   left = 'left',
   right = 'right',
   none = 'none',
 }
 
-export const enum FieldFormat {
+export enum FieldFormat {
   uppercase = 'uppercase',
   lowercase = 'lowercase',
   capitalize = 'capitalize',
 }
 
-export const enum DataToJSON {
+export enum DataToJSON {
   dirty = 'dirty',
   selected = 'selected',
   all = 'all',
