@@ -27,7 +27,7 @@ export type Formatter = {
   week?: string;
 };
 
-export type Config = {
+export interface Config {
   lookupCache?: CacheOptions<string, AxiosPromise>;
   lookupUrl?: string | ((code: string) => string);
   lookupAxiosMethod?: string;
@@ -69,8 +69,8 @@ export type Config = {
     sortOrder?: string;
   }) => object;
   formatter?: Formatter;
-  confirm: (message) => boolean;
-};
+  confirm: (message) => Promise<boolean>;
+}
 
 export type ConfigKeys = keyof Config;
 
@@ -90,7 +90,7 @@ const globalConfig: ObservableMap<ConfigKeys, Config[ConfigKeys]> = observable.m
     { [RecordStatus.add]: 'add', [RecordStatus.update]: 'update', [RecordStatus.delete]: 'delete' },
   ],
   ['feedback', defaultFeedback],
-  ['confirm', () => true],
+  ['confirm', () => Promise.resolve(true)],
   ['validationMessageReportFormatter', defaultValidationMessageReportFormatter],
   [
     'formatter',
