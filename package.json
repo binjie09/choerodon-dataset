@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Front-end data source component library",
   "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "compile": "gulp compile",
     "tsc": "tsc"
