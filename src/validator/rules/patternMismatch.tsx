@@ -17,10 +17,10 @@ export default function patternMismatch(value: any, props: ValidatorProps): meth
   if (!isEmpty(value) && !!pattern && !generatePattern(pattern).test(value)) {
     const ruleName = 'patternMismatch';
     const {
-      [ruleName]: validationMessage = $l('Validator', 'pattern_mismatch'),
+      [ruleName]: validationMessageRaw = $l('Validator', 'pattern_mismatch'),
     } = defaultValidationMessages;
     return new ValidationResult({
-      validationMessage,
+      validationMessageRaw,
       value,
       ruleName,
     });

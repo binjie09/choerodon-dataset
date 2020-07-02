@@ -7,7 +7,12 @@ import { ValidationMessages } from '../validator/Validator';
 import { TransportHookProps, TransportProps } from '../data-set/Transport';
 import DataSet from '../data-set/DataSet';
 import defaultFeedback, { FeedBack } from '../data-set/FeedBack';
-import defaultValidationMessageReportFormatter, { ValidationMessageReportFormatter } from '../validator/ValidationMessageReportFormatter';
+import {
+  defaultValidationMessageReportFormatter,
+  defaultValidationMessageFormatter,
+  ValidationMessageReportFormatter,
+  ValidationMessageFormatter,
+} from '../validator/ValidationMessageReportFormatter';
 import Record from '../data-set/Record';
 import { CacheOptions } from '../cache';
 
@@ -60,6 +65,7 @@ export interface Config {
   tlsKey?: string;
   status?: Status;
   defaultValidationMessages?: ValidationMessages;
+  validationMessageFormatter?: ValidationMessageFormatter;
   validationMessageReportFormatter?: ValidationMessageReportFormatter;
   transport?: TransportProps;
   generatePageQuery?: (pageParams: {
@@ -91,6 +97,7 @@ const globalConfig: ObservableMap<ConfigKeys, Config[ConfigKeys]> = observable.m
   ],
   ['feedback', defaultFeedback],
   ['confirm', () => Promise.resolve(true)],
+  ['validationMessageFormatter', defaultValidationMessageFormatter],
   ['validationMessageReportFormatter', defaultValidationMessageReportFormatter],
   [
     'formatter',

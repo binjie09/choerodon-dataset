@@ -39,7 +39,7 @@ export default function typeMismatch(value, props) {
                 const ruleName = 'typeMismatch';
                 const { [ruleName]: validationMessage = $l(component, 'type_mismatch'), } = defaultValidationMessages;
                 return new ValidationResult({
-                    validationMessage,
+                    validationMessageRaw: validationMessage,
                     value,
                     ruleName,
                 });

@@ -17,10 +17,10 @@ export default function badInput(value: any, props: ValidatorProps): methodRetur
   if (type === FieldType.number && isBadInput(value, range)) {
     const ruleName = 'badInput';
     const {
-      [ruleName]: validationMessage = $l('Validator', 'bad_input'),
+      [ruleName]: validationMessageRaw = $l('Validator', 'bad_input'),
     } = defaultValidationMessages;
     return new ValidationResult({
-      validationMessage,
+      validationMessageRaw,
       value,
       ruleName,
     });

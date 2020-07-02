@@ -19,10 +19,10 @@ export default function rangeOverflow(value: any, props: ValidatorProps): method
     const injectionOptions = { max: isMoment(max) ? max.format(format) : max, label };
     const ruleName = 'rangeOverflow';
     const {
-      [ruleName]: validationMessage = $l('Validator', 'range_overflow'),
+      [ruleName]: validationMessageRaw = $l('Validator', 'range_overflow'),
     } = defaultValidationMessages;
     return new ValidationResult({
-      validationMessage,
+      validationMessageRaw,
       injectionOptions,
       value,
       ruleName,

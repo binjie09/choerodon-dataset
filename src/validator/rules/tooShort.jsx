@@ -11,7 +11,7 @@ export default function tooShort(value, props) {
             const ruleName = 'tooShort';
             const { [ruleName]: validationMessage = $l('Validator', 'too_short'), } = defaultValidationMessages;
             return new ValidationResult({
-                validationMessage: formatReactTemplate(validationMessage, injectionOptions),
+                validationMessageRaw: formatReactTemplate(validationMessage, injectionOptions),
                 injectionOptions,
                 value,
                 ruleName,

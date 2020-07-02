@@ -15,7 +15,7 @@ export default function valueMissing(value, props) {
         const ruleName = label ? 'valueMissing' : 'valueMissingNoLabel';
         const { [ruleName]: validationMessage = $l('Validator', key) } = defaultValidationMessages;
         return new ValidationResult({
-            validationMessage: formatReactTemplate(validationMessage, injectionOptions),
+            validationMessageRaw: formatReactTemplate(validationMessage, injectionOptions),
             injectionOptions,
             value,
             ruleName,

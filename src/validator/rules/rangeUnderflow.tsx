@@ -19,10 +19,10 @@ export default function rangeUnderflow(value: any, props: ValidatorProps): metho
     const injectionOptions = { min: isMoment(min) ? min.format(format) : min, label };
     const ruleName = 'rangeUnderflow';
     const {
-      [ruleName]: validationMessage = $l('Validator', 'range_underflow'),
+      [ruleName]: validationMessageRaw = $l('Validator', 'range_underflow'),
     } = defaultValidationMessages;
     return new ValidationResult({
-      validationMessage,
+      validationMessageRaw,
       injectionOptions,
       value,
       ruleName,

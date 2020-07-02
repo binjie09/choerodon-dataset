@@ -18,7 +18,7 @@ export default function rangeOverflow(value, props) {
         const ruleName = 'rangeOverflow';
         const { [ruleName]: validationMessage = $l('Validator', 'range_overflow'), } = defaultValidationMessages;
         return new ValidationResult({
-            validationMessage: formatReactTemplate(validationMessage, injectionOptions),
+            validationMessageRaw: formatReactTemplate(validationMessage, injectionOptions),
             injectionOptions,
             value,
             ruleName,

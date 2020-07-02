@@ -91,7 +91,7 @@ export default class Validator {
     }
     get validationMessage() {
         const { currentValidationResult } = this;
-        return currentValidationResult && currentValidationResult.validationMessage;
+        return currentValidationResult && currentValidationResult.validationMessageRaw;
     }
     reset() {
         this.clearErrors();

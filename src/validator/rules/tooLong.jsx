@@ -11,7 +11,7 @@ export default function tooLong(value, props) {
             const ruleName = 'tooLong';
             const { [ruleName]: validationMessage = $l('Validator', 'too_long'), } = defaultValidationMessages;
             return new ValidationResult({
-                validationMessage: formatReactTemplate(validationMessage, injectionOptions),
+                validationMessageRaw: formatReactTemplate(validationMessage, injectionOptions),
                 injectionOptions,
                 value,
                 ruleName,

@@ -11,10 +11,10 @@ export default function tooShort(value: any, props: ValidatorProps): methodRetur
       const injectionOptions = { minLength, length };
       const ruleName = 'tooShort';
       const {
-        [ruleName]: validationMessage = $l('Validator', 'too_short'),
+        [ruleName]: validationMessageRaw = $l('Validator', 'too_short'),
       } = defaultValidationMessages;
       return new ValidationResult({
-        validationMessage,
+        validationMessageRaw,
         injectionOptions,
         value,
         ruleName,

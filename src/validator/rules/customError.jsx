@@ -7,7 +7,7 @@ export default async function customError(value, props) {
         const result = await customValidator(value, name, record || form);
         if (isString(result) || result === false) {
             return new ValidationResult({
-                validationMessage: result || $l('Validator', 'unknown'),
+                validationMessageRaw: result || $l('Validator', 'unknown'),
                 value,
                 ruleName: 'customError',
             });

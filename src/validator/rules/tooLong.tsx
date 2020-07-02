@@ -11,10 +11,10 @@ export default function tooLong(value: any, props: ValidatorProps): methodReturn
       const injectionOptions = { maxLength, length };
       const ruleName = 'tooLong';
       const {
-        [ruleName]: validationMessage = $l('Validator', 'too_long'),
+        [ruleName]: validationMessageRaw = $l('Validator', 'too_long'),
       } = defaultValidationMessages;
       return new ValidationResult({
-        validationMessage,
+        validationMessageRaw,
         injectionOptions,
         value,
         ruleName,

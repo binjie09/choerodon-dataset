@@ -48,10 +48,10 @@ export default function typeMismatch(value: any, props: ValidatorProps): methodR
       if (validate(value, range)) {
         const ruleName = 'typeMismatch';
         const {
-          [ruleName]: validationMessage = $l(component, 'type_mismatch'),
+          [ruleName]: validationMessageRaw = $l(component, 'type_mismatch'),
         } = defaultValidationMessages;
         return new ValidationResult({
-          validationMessage,
+          validationMessageRaw,
           value,
           ruleName,
         });

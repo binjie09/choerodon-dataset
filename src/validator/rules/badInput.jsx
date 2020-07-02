@@ -14,7 +14,7 @@ export default function badInput(value, props) {
         const ruleName = 'badInput';
         const { [ruleName]: validationMessage = $l('Validator', 'bad_input'), } = defaultValidationMessages;
         return new ValidationResult({
-            validationMessage,
+            validationMessageRaw: validationMessage,
             value,
             ruleName,
         });

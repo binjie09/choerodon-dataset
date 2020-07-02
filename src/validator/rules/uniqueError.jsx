@@ -56,7 +56,7 @@ export default async function uniqueError(value, props) {
                 const ruleName = 'uniqueError';
                 const { [ruleName]: validationMessage = $l('Validator', 'unique'), } = defaultValidationMessages;
                 return new ValidationResult({
-                    validationMessage,
+                    validationMessageRaw: validationMessage,
                     value,
                     ruleName,
                 });

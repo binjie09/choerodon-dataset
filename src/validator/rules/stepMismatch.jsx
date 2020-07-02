@@ -34,7 +34,7 @@ export default function stepMismatch(value, props) {
             const key = nearStepValues.length === 2 ? 'step_mismatch_between' : 'step_mismatch';
             const { [ruleName]: validationMessage = $l('Validator', key) } = defaultValidationMessages;
             return new ValidationResult({
-                validationMessage: formatReactTemplate(validationMessage, injectionOptions),
+                validationMessageRaw: formatReactTemplate(validationMessage, injectionOptions),
                 injectionOptions,
                 value: isMoment(value) ? value.format(format) : value,
                 ruleName,

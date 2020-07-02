@@ -18,7 +18,7 @@ export default function rangeUnderflow(value, props) {
         const ruleName = 'rangeUnderflow';
         const { [ruleName]: validationMessage = $l('Validator', 'range_underflow'), } = defaultValidationMessages;
         return new ValidationResult({
-            validationMessage: formatReactTemplate(validationMessage, injectionOptions),
+            validationMessageRaw: formatReactTemplate(validationMessage, injectionOptions),
             injectionOptions,
             value,
             ruleName,

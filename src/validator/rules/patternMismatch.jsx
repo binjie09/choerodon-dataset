@@ -15,7 +15,7 @@ export default function patternMismatch(value, props) {
         const ruleName = 'patternMismatch';
         const { [ruleName]: validationMessage = $l('Validator', 'pattern_mismatch'), } = defaultValidationMessages;
         return new ValidationResult({
-            validationMessage,
+            validationMessageRaw: validationMessage,
             value,
             ruleName,
         });
