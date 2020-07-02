@@ -2,11 +2,18 @@ import { computed, observable, runInAction } from 'mobx';
 import { ValidationMessages } from './Validator';
 import { getConfig } from '../configure';
 
+export interface ValidationResultProps {
+  validationMessageRaw?: string;
+  injectionOptions?: object;
+  value?: any;
+  ruleName: keyof ValidationMessages;
+}
+
 export default class ValidationResult {
   @observable validationMessageRaw?: string;
 
   @computed
-  get validationMessage() {
+  get validationMessage(): any {
     const { validationMessageRaw, injectionOptions } = this;
     if (validationMessageRaw && injectionOptions) {
       return getConfig('validationMessageFormatter')(validationMessageRaw, injectionOptions);
@@ -14,19 +21,19 @@ export default class ValidationResult {
     return validationMessageRaw;
   }
 
-  set validationMessage(validationMessageRaw) {
+  set validationMessage(validationMessageRaw: any) {
     runInAction(() => {
       this.validationMessageRaw = validationMessageRaw;
     });
   }
 
-  @observable injectionOptions?: any;
+  @observable injectionOptions?: object;
 
   @observable value?: any;
 
   @observable ruleName: keyof ValidationMessages;
 
-  constructor(props: ValidationResult) {
+  constructor(props: ValidationResultProps) {
     runInAction(() => {
       Object.assign(this, props);
     });
