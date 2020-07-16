@@ -36,7 +36,11 @@ export default async function uniqueError(
             if (!dirty && field.dirty) {
               dirty = true;
             }
-            fields[fieldName] = otherValue;
+            if (field && field.get('type') === FieldType.object) {
+              fields[fieldName] = otherValue[field.get('valueField')];
+            } else {
+              fields[fieldName] = otherValue;
+            }
           }
           return false;
         })

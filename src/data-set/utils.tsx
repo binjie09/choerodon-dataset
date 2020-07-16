@@ -472,7 +472,10 @@ export function getRecordValue(
             return cascadeParent.toData(true, true);
           }
           if (cascadeParentFieldBind) {
-            return cascadeParent.get(cascadeParentFieldBind);
+            const bindValue = cascadeParent.get(cascadeParentFieldBind);
+            if (bindValue !== undefined) {
+              return bindValue;
+            }
           }
         }
       }
