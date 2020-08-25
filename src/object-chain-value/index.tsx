@@ -71,3 +71,9 @@ export function remove(obj: object, prop: string) {
     mobxRemove(obj, prop);
   }
 }
+
+export default {
+  get,
+  set,
+  remove,
+};

@@ -110,3 +110,10 @@ export function getNearStepValues<T extends Moment | number>(
     }
   }
 }
+
+export default {
+  MAX_SAFE_INTEGER,
+  getPrecision,
+  plus,
+  getNearStepValues,
+};

@@ -1,7 +1,7 @@
 import { action } from 'mobx';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
 import isString from 'lodash/isString';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import axios from '../axios';
 import Field from '../data-set/Field';
 import lovCodeStore from './LovCodeStore';
@@ -19,11 +19,11 @@ export type responseType = responseData | undefined;
 
 export class LookupCodeStore {
   get axios(): AxiosInstance {
-    return getConfig('axios') || axios;
+    return getConfig<Config>('axios') || axios;
   }
 
   batchCallback = (codes): Promise<{ [key: string]: responseData }> => {
-    const lookupBatchAxiosConfig = getConfig('lookupBatchAxiosConfig');
+    const lookupBatchAxiosConfig = getConfig<Config>('lookupBatchAxiosConfig');
     if (lookupBatchAxiosConfig) {
       return this.axios(lookupBatchAxiosConfig(codes)) as any;
     }
@@ -32,7 +32,7 @@ export class LookupCodeStore {
 
   merger: PromiseMerger<responseData> = new PromiseMerger<responseData>(
     this.batchCallback,
-    getConfig('lookupCache'),
+    getConfig<Config>('lookupCache'),
   );
 
   async fetchLookupData(
@@ -44,7 +44,7 @@ export class LookupCodeStore {
       config = {
         ...axiosConfig,
         url: key,
-        method: axiosConfig.method || getConfig('lookupAxiosMethod') || 'post',
+        method: axiosConfig.method || getConfig<Config>('lookupAxiosMethod') || 'post',
       };
     } else {
       config = key as AxiosRequestConfig;
@@ -55,7 +55,7 @@ export class LookupCodeStore {
       if (typeof window !== 'undefined') {
         const result: any = await this.axios(config);
         if (result) {
-          data = generateResponseData(result, getConfig('dataKey'));
+          data = generateResponseData(result, getConfig<Config>('dataKey'));
         }
       }
       return data;
@@ -67,7 +67,7 @@ export class LookupCodeStore {
   }
 
   getAxiosConfig(field: Field): AxiosRequestConfig {
-    const lookupAxiosConfig = field.get('lookupAxiosConfig') || getConfig('lookupAxiosConfig');
+    const lookupAxiosConfig = field.get('lookupAxiosConfig') || getConfig<Config>('lookupAxiosConfig');
     const { record } = field;
     const params = getLovPara(field, record);
     const config = processAxiosConfig(lookupAxiosConfig, {
@@ -80,7 +80,7 @@ export class LookupCodeStore {
       adapter,
       ...config,
       url: config.url || this.getUrl(field),
-      method: config.method || getConfig('lookupAxiosMethod') || 'post',
+      method: config.method || getConfig<Config>('lookupAxiosMethod') || 'post',
       params: config.params || params,
     };
   }

@@ -9,7 +9,7 @@ import isNil from 'lodash/isNil';
 import defer from 'lodash/defer';
 import debounce from 'lodash/debounce';
 import warning from '../warning';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import localeContext, { $l } from '../locale-context';
 import axios from '../axios';
 import Record from './Record';
@@ -320,18 +320,18 @@ export default class DataSet extends EventManager {
 
   @computed
   get axios(): AxiosInstance {
-    return this.props.axios || getConfig('axios') || axios;
+    return this.props.axios || getConfig<Config>('axios') || axios;
   }
 
   @computed
   get dataKey(): string {
-    const { dataKey = getConfig('dataKey') } = this.props;
+    const { dataKey = getConfig<Config>('dataKey') } = this.props;
     return dataKey;
   }
 
   @computed
   get totalKey(): string {
-    return this.props.totalKey || getConfig('totalKey');
+    return this.props.totalKey || getConfig<Config>('totalKey');
   }
 
   @computed
@@ -907,7 +907,7 @@ export default class DataSet extends EventManager {
         if (
           !modifiedCheck ||
           !this.dirty ||
-          (await getConfig('confirm')($l('DataSet', 'unsaved_data_confirm')))
+          (await getConfig<Config>('confirm')($l('DataSet', 'unsaved_data_confirm')))
         ) {
           await this.query(Math.floor(index / pageSize) + 1);
           currentRecord = this.findInAllPage(index);
@@ -1034,7 +1034,7 @@ export default class DataSet extends EventManager {
       if (
         records.length > 0 &&
         (await this.fireEvent(DataSetEvents.beforeDelete, { dataSet: this, records })) !== false &&
-        (await getConfig('confirm')(confirmMessage || $l('DataSet', 'delete_selected_row_confirm')))) {
+        (await getConfig<Config>('confirm')(confirmMessage || $l('DataSet', 'delete_selected_row_confirm')))) {
         this.remove(records);
         return this.pending.add(this.write(this.destroyed));
       }
@@ -1092,7 +1092,7 @@ export default class DataSet extends EventManager {
   async deleteAll(confirmMessage?) {
     if (
       this.records.length > 0 &&
-      (await getConfig('confirm')(confirmMessage || $l('DataSet', 'delete_all_row_confirm')))
+      (await getConfig<Config>('confirm')(confirmMessage || $l('DataSet', 'delete_all_row_confirm')))
     ) {
       this.removeAll();
       return this.pending.add(this.write(this.destroyed));
@@ -1554,8 +1554,8 @@ export default class DataSet extends EventManager {
       );
       // 若有响应数据，进行数据回写
     } else if (allData.length) {
-      const statusKey = getConfig('statusKey');
-      const status = getConfig('status');
+      const statusKey = getConfig<Config>('statusKey');
+      const status = getConfig<Config>('status');
       const restCreatedData: any[] = [];
       const restUpdatedData: any[] = [];
       allData.forEach(data => {
@@ -2105,7 +2105,7 @@ Then the query method will be auto invoke.`,
   private generateQueryString(page: number) {
     const order = this.generateOrderQueryString();
     const pageQuery = this.generatePageQueryString(page);
-    const generatePageQuery = getConfig('generatePageQuery');
+    const generatePageQuery = getConfig<Config>('generatePageQuery');
     if (typeof generatePageQuery === 'function') {
       return generatePageQuery({
         sortName: order.sortname,

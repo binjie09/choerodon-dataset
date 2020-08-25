@@ -8,7 +8,7 @@ import isString from 'lodash/isString';
 import isArray from 'lodash/isArray';
 import isNumber from 'lodash/isNumber';
 import warning from '../warning';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import Field, { DynamicPropsArguments, FieldProps, Fields } from './Field';
 import { BooleanValue, DataToJSON, FieldType, RecordStatus, SortOrder } from './enum';
 import DataSet from './DataSet';
@@ -58,7 +58,7 @@ export function processToJSON(value) {
     value = moment(value);
   }
   if (isMoment(value)) {
-    const { jsonDate } = getConfig('formatter');
+    const { jsonDate } = getConfig<Config>('formatter');
     value = jsonDate ? value.format(jsonDate) : +value;
   }
   return value;
@@ -114,7 +114,7 @@ function processOne(value: any, field: Field, checkRange: boolean = true) {
         case FieldType.week:
         case FieldType.month:
         case FieldType.year: {
-          const { jsonDate } = getConfig('formatter');
+          const { jsonDate } = getConfig<Config>('formatter');
           value = jsonDate ? moment(value, jsonDate) : moment(value);
           break;
         }
@@ -520,7 +520,7 @@ export function processIntlField(
   callback: (name: string, props: FieldProps) => Field,
   dataSet?: DataSet,
 ): Field {
-  const tlsKey = getConfig('tlsKey');
+  const tlsKey = getConfig<Config>('tlsKey');
   const { supports } = localeContext;
   const languages = Object.keys(supports);
   const { type, dynamicProps } = fieldProps;
@@ -643,7 +643,7 @@ export function isDirtyRecord(record) {
 }
 
 export function getDateFormatByFieldType(type: FieldType) {
-  const formatter = getConfig('formatter');
+  const formatter = getConfig<Config>('formatter');
   switch (type) {
     case FieldType.date:
       return formatter.date;
@@ -669,5 +669,5 @@ export function getDateFormatByField(field?: Field, type?: FieldType): string {
   if (type) {
     return getDateFormatByFieldType(type);
   }
-  return getConfig('formatter').jsonDate || moment.defaultFormat;
+  return getConfig<Config>('formatter').jsonDate || moment.defaultFormat;
 }

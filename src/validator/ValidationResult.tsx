@@ -1,6 +1,6 @@
 import { computed, observable, runInAction } from 'mobx';
 import { ValidationMessages } from './Validator';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 
 export interface ValidationResultProps {
   validationMessageRaw?: string;
@@ -16,7 +16,7 @@ export default class ValidationResult {
   get validationMessage(): any {
     const { validationMessageRaw, injectionOptions } = this;
     if (validationMessageRaw && injectionOptions) {
-      return getConfig('validationMessageFormatter')(validationMessageRaw, injectionOptions);
+      return getConfig<Config>('validationMessageFormatter')(validationMessageRaw, injectionOptions);
     }
     return validationMessageRaw;
   }

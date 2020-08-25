@@ -1,7 +1,7 @@
 import isNil from 'lodash/isNil';
 import { action, observable, ObservableMap, runInAction } from 'mobx';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { getConfig } from '../configure';
+import { getConfig, Config } from '../configure';
 import warning from '../warning';
 import DataSet, { DataSetProps } from '../data-set/DataSet';
 import axios from '../axios';
@@ -93,7 +93,7 @@ export class LovCodeStore {
   pendings = {};
 
   get axios(): AxiosInstance {
-    return getConfig('axios') || axios;
+    return getConfig<Config>('axios') || axios;
   }
 
   constructor() {
@@ -107,7 +107,7 @@ export class LovCodeStore {
 
   getDefineAxiosConfig(code: string, field?: Field): AxiosRequestConfig | undefined {
     const lovDefineAxiosConfig =
-      (field && field.get('lovDefineAxiosConfig')) || getConfig('lovDefineAxiosConfig');
+      (field && field.get('lovDefineAxiosConfig')) || getConfig<Config>('lovDefineAxiosConfig');
     const config = processAxiosConfig(lovDefineAxiosConfig, code);
     return {
       ...config,
@@ -193,7 +193,7 @@ export class LovCodeStore {
   }
 
   getConfigUrl(code: string, field?: Field): string {
-    const lovDefineUrl = (field && field.get('lovDefineUrl')) || getConfig('lovDefineUrl');
+    const lovDefineUrl = (field && field.get('lovDefineUrl')) || getConfig<Config>('lovDefineUrl');
     if (typeof lovDefineUrl === 'function') {
       return lovDefineUrl(code);
     }
@@ -203,7 +203,7 @@ export class LovCodeStore {
   getQueryAxiosConfig(code: string, field?: Field, config?: LovConfig) {
     return (props: TransportHookProps) => {
       const lovQueryAxiosConfig =
-        (field && field.get('lovQueryAxiosConfig')) || getConfig('lovQueryAxiosConfig');
+        (field && field.get('lovQueryAxiosConfig')) || getConfig<Config>('lovQueryAxiosConfig');
       const axiosConfig = processAxiosConfig(lovQueryAxiosConfig, code, config, props);
       return {
         ...axiosConfig,
@@ -222,7 +222,7 @@ export class LovCodeStore {
       }
     }
 
-    const lovQueryUrl = (field && field.get('lovQueryUrl')) || getConfig('lovQueryUrl');
+    const lovQueryUrl = (field && field.get('lovQueryUrl')) || getConfig<Config>('lovQueryUrl');
 
     if (typeof lovQueryUrl === 'function') {
       return lovQueryUrl(code, config, props);

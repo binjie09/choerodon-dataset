@@ -7,7 +7,7 @@ import merge from 'lodash/merge';
 import defer from 'lodash/defer';
 import unionBy from 'lodash/unionBy';
 import { AxiosRequestConfig } from 'axios';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import warning from '../warning';
 import DataSet from './DataSet';
 import Record from './Record';
@@ -346,7 +346,7 @@ export default class Field {
   @computed
   get intlFields(): Field[] {
     const { record, type, name } = this;
-    const tlsKey = getConfig('tlsKey');
+    const tlsKey = getConfig<Config>('tlsKey');
     if (type === FieldType.intl && record && record.get(tlsKey)) {
       return Object.keys(localeContext.supports).reduce<Field[]>((arr, lang) => {
         const field = record.getField(`${tlsKey}.${name}.${lang}`);
@@ -437,7 +437,7 @@ export default class Field {
     const dsField = this.findDataSetField();
     const lovCode = this.get('lovCode');
     return merge(
-      { lookupUrl: getConfig('lookupUrl') },
+      { lookupUrl: getConfig<Config>('lookupUrl') },
       Field.defaultProps,
       getPropsFromLovConfig(lovCode, 'textField'),
       getPropsFromLovConfig(lovCode, 'valueField'),
@@ -523,7 +523,7 @@ export default class Field {
       }
     }
     if (propsName === 'lookupUrl') {
-      return getConfig(propsName);
+      return getConfig<Config>(propsName);
     }
     return undefined;
   }
@@ -779,7 +779,7 @@ export default class Field {
    * @return Promise<object[]>
    */
   async fetchLookup(): Promise<object[] | undefined> {
-    const batch = getConfig('lookupBatchAxiosConfig');
+    const batch = getConfig<Config>('lookupBatchAxiosConfig');
     const lookupCode = this.get('lookupCode');
     const lovPara = getLovPara(this, this.record);
     const dsField = this.findDataSetField();

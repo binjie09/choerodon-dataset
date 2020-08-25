@@ -6,7 +6,7 @@ import isString from 'lodash/isString';
 import isNumber from 'lodash/isNumber';
 import omit from 'lodash/omit';
 import isPlainObject from 'lodash/isPlainObject';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import warning from '../warning';
 import DataSet from './DataSet';
 import Field, { FieldProps, Fields } from './Field';
@@ -348,7 +348,7 @@ export default class Record {
     return {
       ...this.toData(true, noCascade, isCascadeSelect, false),
       __id: this.id,
-      [getConfig('statusKey')]: getConfig('status')[
+      [getConfig<Config>('statusKey')]: getConfig<Config>('status')[
         status === RecordStatus.sync ? RecordStatus.update : status
         ],
     };
@@ -551,7 +551,7 @@ export default class Record {
 
   @action
   async tls(name?: string): Promise<void> {
-    const tlsKey = getConfig('tlsKey');
+    const tlsKey = getConfig<Config>('tlsKey');
     const { dataSet } = this;
     if (dataSet && name) {
       const tlsData = this.get(tlsKey) || {};
@@ -568,7 +568,7 @@ export default class Record {
         if (newConfig.url && !this.isNew) {
           const result = await axios(newConfig);
           if (result) {
-            const dataKey = getConfig('dataKey');
+            const dataKey = getConfig<Config>('dataKey');
             this.commitTls(generateResponseData(result, dataKey)[0], name);
           }
         } else {
@@ -706,7 +706,7 @@ export default class Record {
   private commitTls(data = {}, name: string) {
     const { dataSet } = this;
     const lang = dataSet ? dataSet.lang : localeContext.locale.lang;
-    const tlsKey = getConfig('tlsKey');
+    const tlsKey = getConfig<Config>('tlsKey');
     const values: object = {};
     if (!(name in data)) {
       data[name] = {};

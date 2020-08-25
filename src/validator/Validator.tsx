@@ -2,7 +2,7 @@ import { action, computed, isArrayLike, observable, runInAction } from 'mobx';
 import isString from 'lodash/isString';
 import omitBy from 'lodash/omitBy';
 import isUndefined from 'lodash/isUndefined';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import Validity from './Validity';
 import ValidationResult from './ValidationResult';
 import Record from '../data-set/Record';
@@ -168,7 +168,7 @@ export default class Validator {
         'validation:',
         isString(validationMessage)
           ? validationMessage
-          : await getConfig('validationMessageReportFormatter')(validationMessage),
+          : await getConfig<Config>('validationMessageReportFormatter')(validationMessage),
       ];
       if (dataSet) {
         const { name: dsName, id } = dataSet;

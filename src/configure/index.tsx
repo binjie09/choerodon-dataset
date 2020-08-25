@@ -8,10 +8,10 @@ import { TransportHookProps, TransportProps } from '../data-set/Transport';
 import DataSet from '../data-set/DataSet';
 import defaultFeedback, { FeedBack } from '../data-set/FeedBack';
 import {
-  defaultValidationMessageReportFormatter,
   defaultValidationMessageFormatter,
-  ValidationMessageReportFormatter,
+  defaultValidationMessageReportFormatter,
   ValidationMessageFormatter,
+  ValidationMessageReportFormatter,
 } from '../validator/ValidationMessageReportFormatter';
 import Record from '../data-set/Record';
 import { CacheOptions } from '../cache';
@@ -113,15 +113,15 @@ const globalConfig: ObservableMap<ConfigKeys, Config[ConfigKeys]> = observable.m
   ],
 ]);
 
-export function getConfig(key: ConfigKeys): any {
+export function getConfig<C extends Config>(key: keyof C): any {
   // FIXME: observable.map把构建map时传入的key类型和value类型分别做了union，
   // 丢失了一一对应的映射关系，导致函数调用者无法使用union后的返回值类型，因此需要指定本函数返回值为any
-  return globalConfig.get(key);
+  return (globalConfig as ObservableMap<keyof C, C[keyof C]>).get(key);
 }
 
 const mergeProps = ['transport', 'feedback', 'formatter'];
 
-export default function configure(config: Config) {
+export default function configure<C extends Config>(config: C) {
   runInAction(() => {
     Object.keys(config).forEach((key: ConfigKeys) => {
       const value = config[key];
@@ -131,7 +131,7 @@ export default function configure(config: Config) {
           ...value,
         });
       } else {
-        globalConfig.set(key, config[key] as string);
+        globalConfig.set(key, config[key]);
       }
     });
   });

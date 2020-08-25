@@ -1,5 +1,5 @@
 import { IReactionDisposer, reaction } from 'mobx';
-import { getConfig } from '../configure';
+import { Config, getConfig } from '../configure';
 import Yallist from './Yallist'; // 双向链表 -> 缓存更新性能优化
 
 const MAX = Symbol('max'); // 最大值
@@ -370,7 +370,7 @@ export default class Cache<K, V> {
 
 export function refreshCacheOptions(cache: Cache<any, any>): IReactionDisposer {
   return reaction(
-    () => getConfig('lookupCache'),
+    () => getConfig<Config>('lookupCache'),
     (lookupCache = {}) => {
       if ('max' in lookupCache) {
         cache.max = lookupCache.max;
