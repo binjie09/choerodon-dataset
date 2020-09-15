@@ -1,5 +1,6 @@
 import { action, get, observable, runInAction } from 'mobx';
 import moment from 'moment';
+import defaultTo from 'lodash/defaultTo';
 import defaultLocale, { Locale } from './locale';
 import defaultSupports, { Supports } from './supports';
 import normalizeLanguage from '../normalize-language';
@@ -35,7 +36,7 @@ export class LocaleContext {
   get(component: string, key?: string, defaults?: Locale) {
     const cmp = get(this.locale, component) || (defaults && mobxGet(defaults, component));
     if (key) {
-      return (cmp && mobxGet(cmp, key)) || `${component}.${key}`;
+      return defaultTo(cmp && mobxGet(cmp, key), `${component}.${key}`);
     }
     return cmp;
   }
