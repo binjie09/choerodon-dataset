@@ -1,4 +1,4 @@
-import { action, computed, get, isArrayLike, isObservableArray, observable, runInAction, set, toJS } from 'mobx';
+import { action, computed, isArrayLike, isObservableArray, observable, ObservableMap, runInAction, set, toJS } from 'mobx';
 import merge from 'lodash/merge';
 import isObject from 'lodash/isObject';
 import isNil from 'lodash/isNil';
@@ -42,6 +42,8 @@ const IDGen: IterableIterator<number> = (function* (start: number) {
   }
 })(1000);
 
+const EXPANDED_KEY = '__EXPANDED_KEY__';
+
 export default class Record {
   id: number;
 
@@ -73,7 +75,7 @@ export default class Record {
 
   @observable editing?: boolean;
 
-  @observable state: { [key: string]: any };
+  @observable state: ObservableMap<string, any>;
 
   @computed
   get key(): string | number {
@@ -151,7 +153,7 @@ export default class Record {
         return expanded === (field ? field.get(BooleanValue.trueValue) : true);
       }
     }
-    return false;
+    return this.getState(EXPANDED_KEY);
   }
 
   set isExpanded(expand: boolean) {
@@ -168,6 +170,8 @@ export default class Record {
             : field.get(BooleanValue.falseValue)
             : expand,
         );
+      } else {
+        this.setState(EXPANDED_KEY, expand);
       }
     }
   }
@@ -300,7 +304,7 @@ export default class Record {
   constructor(data: object = {}, dataSet?: DataSet) {
     runInAction(() => {
       const initData = toJS(data);
-      this.state = {};
+      this.state = observable.map<string, any>();
       this.fields = observable.map<string, Field>();
       this.status = RecordStatus.add;
       this.selectable = true;
@@ -691,15 +695,15 @@ export default class Record {
   @action
   setState(item: string | object, value?: any) {
     if (isString(item)) {
-      set(this.state, item, value);
+      this.state.set(item, value);
     } else if (isPlainObject(item)) {
-      set(this.state, item);
+      this.state.merge(item);
     }
     return this;
   }
 
   getState(key: string) {
-    return get(this.state, key);
+    return this.state.get(key);
   }
 
   @action
