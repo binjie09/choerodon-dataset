@@ -12,6 +12,9 @@ const tsConfig = require('./tools/getTSCommonConfig')();
 const tsDefaultReporter = ts.reporter.defaultReporter();
 const libDir = path.resolve('lib');
 
+const packagePath = path.resolve('package.json');
+const packageJson = require(packagePath);
+
 function babelify(js) {
   const babelConfig = getBabelCommonConfig();
   return js
@@ -51,3 +54,15 @@ gulp.task('compile', done => {
     .pipe(gulp.dest(libDir))
     .on('finish', done);
 });
+
+gulp.task(
+  'pre-publish',
+  (done) => {
+    // 同步写入package.json文件
+    fs.writeFileSync(packagePath, JSON.stringify({
+      ...packageJson,
+      version: packageJson.version + `-${process.env.CI_COMMIT_REF_NAME}.${moment().format('YYYYMMDDHHmmss')}`,
+    }, null, 2));
+    done();
+  },
+);
