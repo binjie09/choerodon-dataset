@@ -1,6 +1,6 @@
 {
   "name": "@buildrun/dataset",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Front-end data source component library",
   "main": "lib/index.js",
   "files": [
@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "compile": "gulp compile",
+    "pre-publish": "gulp pre-publish",
     "tsc": "tsc"
   },
   "repository": {
