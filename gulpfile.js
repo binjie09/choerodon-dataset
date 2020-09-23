@@ -1,4 +1,5 @@
 const fs = require('fs');
+const moment = require('moment');
 const merge2 = require('merge2');
 const babel = require('gulp-babel');
 const argv = require('minimist')(process.argv.slice(2));
