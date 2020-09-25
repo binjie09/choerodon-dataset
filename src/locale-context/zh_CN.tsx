@@ -8,6 +8,7 @@ const locale: Locale = {
     invalid_query_dataset: '查询条件数据集校验不通过',
     delete_selected_row_confirm: '确认删除选中行？',
     delete_all_row_confirm: '确认删除所有行？',
+    query_success: '查询成功',
     query_failure: '查询失败',
     submit_success: '提交成功',
     submit_failure: '提交失败',
