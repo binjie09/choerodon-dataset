@@ -9,6 +9,7 @@ export interface Locale {
     invalid_query_dataset;
     delete_selected_row_confirm;
     delete_all_row_confirm;
+    query_success;
     query_failure;
     submit_success;
     submit_failure;

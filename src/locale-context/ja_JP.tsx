@@ -8,6 +8,7 @@ const locale: Locale = {
     invalid_query_dataset: 'クエリ条件データセットの検証に失敗しました',
     delete_selected_row_confirm: '選択した行を削除してもよろしいですか？ ',
     delete_all_row_confirm: '本当にすべての行を削除しますか？ ',
+    query_success: '検索成功',
     query_failure: 'クエリに失敗しました',
     submit_success: '送信に成功しました',
     submit_failure: '送信に失敗しました',

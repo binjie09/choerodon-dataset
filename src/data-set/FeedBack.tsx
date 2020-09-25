@@ -1,21 +1,21 @@
 export interface FeedBack {
-  loadSuccess?(result: any);
+  loadSuccess?(result: any, defaultMessage?: string);
 
-  loadFailed?(error: Error);
+  loadFailed?(error: Error, defaultMessage?: string);
 
-  submitSuccess?(result: any);
+  submitSuccess?(result: any, defaultMessage?: string);
 
-  submitFailed?(error: Error);
+  submitFailed?(error: Error, defaultMessage?: string);
 }
 
 const defaultFeedback: FeedBack = {
-  loadSuccess(_result: any) {
+  loadSuccess(_result: any, _defaultMessage?: string) {
   },
-  loadFailed(_error: Error) {
+  loadFailed(_error: Error, _defaultMessage?: string) {
   },
-  submitSuccess(_result: any) {
+  submitSuccess(_result: any, _defaultMessage?: string) {
   },
-  submitFailed(_error: Error) {
+  submitFailed(_error: Error, _defaultMessage?: string) {
   },
 };
 

@@ -8,6 +8,7 @@ const locale: Locale = {
     invalid_query_dataset: 'Query condition dataSet verification failed.',
     delete_selected_row_confirm: 'Are you sure to delete the selected row?',
     delete_all_row_confirm: 'Are you sure to delete all rows?',
+    query_success: 'Query successfully.',
     query_failure: 'Fail to query data.',
     submit_success: 'Submit successfully.',
     submit_failure: 'Fail to submit data.',

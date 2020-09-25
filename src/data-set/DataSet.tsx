@@ -1947,14 +1947,14 @@ Then the query method will be auto invoke.`,
 
   private handleLoadSuccess(resp: any) {
     const { loadSuccess = defaultFeedback.loadSuccess } = this.feedback;
-    loadSuccess!(resp);
+    loadSuccess!(resp, $l('DataSet', ''));
     return resp;
   }
 
   private handleLoadFail(e) {
     const { loadFailed = defaultFeedback.loadFailed } = this.feedback;
     this.fireEvent(DataSetEvents.loadFailed, { dataSet: this });
-    loadFailed!(e);
+    loadFailed!(e, $l('DataSet', 'query_failure'));
   }
 
   private handleSubmitSuccess(resp: any[]) {
@@ -1980,7 +1980,7 @@ Then the query method will be auto invoke.`,
     }
     this.fireEvent(DataSetEvents.submitSuccess, { dataSet: this, data: result });
     this.commitData(data, total);
-    submitSuccess!(result);
+    submitSuccess!(result, $l('DataSet', 'submit_success'));
     return result;
   }
 
@@ -1989,7 +1989,7 @@ Then the query method will be auto invoke.`,
     const { current } = this;
     const { submitFailed = defaultFeedback.submitFailed } = this.feedback;
     this.fireEvent(DataSetEvents.submitFailed, { dataSet: this });
-    submitFailed!(e);
+    submitFailed!(e, $l('DataSet', 'submit_failure'));
     if (this.props.autoLocateAfterRemove && current && this.destroyed.length) {
       current.isCurrent = false;
     }
