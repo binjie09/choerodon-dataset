@@ -33,6 +33,7 @@ export type LovConfigItem = {
   gridFieldWidth?: number;
   gridFieldAlign?: ColumnAlign;
   gridFieldSequence: number;
+  queryFieldProps?: FieldProps;
   fieldProps?: FieldProps;
 };
 

@@ -43,6 +43,7 @@ function generateConditionField(
     conditionFieldSelectTf,
     conditionFieldSelectVf,
     conditionFieldRequired,
+    queryFieldProps,
     fieldProps,
   }: LovConfigItem,
 ): void {
@@ -59,6 +60,7 @@ function generateConditionField(
       valueField: conditionFieldSelectVf || undefined,
       required: conditionFieldRequired || undefined,
       ...fieldProps,
+      ...queryFieldProps,
     };
     fields.push(field);
     if (conditionFieldType === LovFieldType.POPUP) {
