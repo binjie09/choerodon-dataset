@@ -1032,9 +1032,10 @@ export default class DataSet extends EventManager {
     if (records) {
       records = ([] as Record[]).concat(records);
       if (
+        confirmMessage !== false &&
         records.length > 0 &&
         (await this.fireEvent(DataSetEvents.beforeDelete, { dataSet: this, records })) !== false &&
-        (await getConfig<Config>('confirm')(confirmMessage || $l('DataSet', 'delete_selected_row_confirm')))) {
+        (await getConfig<Config>('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_selected_row_confirm')))) {
         this.remove(records);
         return this.pending.add(this.write(this.destroyed));
       }
@@ -1091,8 +1092,9 @@ export default class DataSet extends EventManager {
   @action
   async deleteAll(confirmMessage?) {
     if (
+      confirmMessage !== false &&
       this.records.length > 0 &&
-      (await getConfig<Config>('confirm')(confirmMessage || $l('DataSet', 'delete_all_row_confirm')))
+      (await getConfig<Config>('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_all_row_confirm')))
     ) {
       this.removeAll();
       return this.pending.add(this.write(this.destroyed));
