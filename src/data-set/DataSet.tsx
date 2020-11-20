@@ -880,9 +880,9 @@ export default class DataSet extends EventManager {
    * @param page 页码
    * @return Promise
    */
-  page(page: number): Promise<any> {
+  page(page: number, append?: boolean): Promise<any> {
     if (page > 0 && this.paging) {
-      return this.locate((page - 1) * this.pageSize + this.created.length - this.destroyed.length);
+      return this.locate((page - 1) * this.pageSize + this.created.length - this.destroyed.length, append);
     }
     warning(page > 0, 'Page number is incorrect.');
     warning(this.paging, 'Can not paging query util the property<paging> of DataSet is true.');
@@ -894,7 +894,7 @@ export default class DataSet extends EventManager {
    * @param index 索引
    * @return Promise
    */
-  async locate(index: number): Promise<Record | undefined> {
+  async locate(index: number, append?: boolean): Promise<Record | undefined> {
     const { paging, pageSize, totalCount } = this;
     const { modifiedCheck } = this.props;
     let currentRecord = this.findInAllPage(index);
@@ -909,7 +909,7 @@ export default class DataSet extends EventManager {
           !this.dirty ||
           (await getConfig<Config>('confirm')($l('DataSet', 'unsaved_data_confirm')))
         ) {
-          await this.query(Math.floor(index / pageSize) + 1);
+          await this.query(Math.floor(index / pageSize) + 1, {}, append);
           currentRecord = this.findInAllPage(index);
           if (currentRecord) {
             this.current = currentRecord;
@@ -976,8 +976,8 @@ export default class DataSet extends EventManager {
    * 定位到下一页
    * @return Promise
    */
-  nextPage(): Promise<any> {
-    return this.page(this.currentPage + 1);
+  nextPage(append?: boolean): Promise<any> {
+    return this.page(this.currentPage + 1, append);
   }
 
   /**
