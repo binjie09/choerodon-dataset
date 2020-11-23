@@ -53,6 +53,14 @@ function getSpliceRecord(records: Record[], inserts: Record[], fromRecord?: Reco
   }
 }
 
+function fixAxiosConfig(config: AxiosRequestConfig): AxiosRequestConfig {
+  const { method } = config;
+  if (method && method.toLowerCase() === 'get') {
+    delete config.data;
+  }
+  return config;
+}
+
 export type DataSetChildren = { [key: string]: DataSet };
 
 export type Events = { [key: string]: Function };
@@ -1844,7 +1852,7 @@ Then the query method will be auto invoke.`,
           });
           if (submitEventResult) {
             const result: any[] = await axiosStatic.all(
-              axiosConfigs.map(config => this.axios(config)),
+              axiosConfigs.map(config => this.axios(fixAxiosConfig(config))),
             );
             return this.handleSubmitSuccess(result);
           }
@@ -1871,7 +1879,7 @@ Then the query method will be auto invoke.`,
             data: newConfig.data,
           });
           if (queryEventResult) {
-            const result = await this.axios(newConfig);
+            const result = await this.axios(fixAxiosConfig(newConfig));
             runInAction(() => {
               this.currentPage = page;
             });
