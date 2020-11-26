@@ -905,7 +905,7 @@ export default class DataSet extends EventManager {
   async locate(index: number, append?: boolean): Promise<Record | undefined> {
     const { paging, pageSize, totalCount } = this;
     const { modifiedCheck } = this.props;
-    let currentRecord = this.findInAllPage(index);
+    let currentRecord = append ? this.get(index) : this.findInAllPage(index);
     if (currentRecord) {
       this.current = currentRecord;
       return currentRecord;
@@ -918,7 +918,7 @@ export default class DataSet extends EventManager {
           (await getConfig<Config>('confirm')($l('DataSet', 'unsaved_data_confirm')))
         ) {
           await this.query(Math.floor(index / pageSize) + 1, {}, append);
-          currentRecord = this.findInAllPage(index);
+          currentRecord = append ? this.get(index) : this.findInAllPage(index);
           if (currentRecord) {
             this.current = currentRecord;
             return currentRecord;
