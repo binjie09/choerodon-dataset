@@ -53,6 +53,14 @@ function getSpliceRecord(records: Record[], inserts: Record[], fromRecord?: Reco
   }
 }
 
+function fixAxiosConfig(config: AxiosRequestConfig): AxiosRequestConfig {
+  const { method } = config;
+  if (method && method.toLowerCase() === 'get') {
+    delete config.data;
+  }
+  return config;
+}
+
 export type DataSetChildren = { [key: string]: DataSet };
 
 export type Events = { [key: string]: Function };
@@ -880,9 +888,9 @@ export default class DataSet extends EventManager {
    * @param page 页码
    * @return Promise
    */
-  page(page: number): Promise<any> {
+  page(page: number, append?: boolean): Promise<any> {
     if (page > 0 && this.paging) {
-      return this.locate((page - 1) * this.pageSize + this.created.length - this.destroyed.length);
+      return this.locate((page - 1) * this.pageSize + this.created.length - this.destroyed.length, append);
     }
     warning(page > 0, 'Page number is incorrect.');
     warning(this.paging, 'Can not paging query util the property<paging> of DataSet is true.');
@@ -894,10 +902,10 @@ export default class DataSet extends EventManager {
    * @param index 索引
    * @return Promise
    */
-  async locate(index: number): Promise<Record | undefined> {
+  async locate(index: number, append?: boolean): Promise<Record | undefined> {
     const { paging, pageSize, totalCount } = this;
     const { modifiedCheck } = this.props;
-    let currentRecord = this.findInAllPage(index);
+    let currentRecord = append ? this.get(index) : this.findInAllPage(index);
     if (currentRecord) {
       this.current = currentRecord;
       return currentRecord;
@@ -909,8 +917,8 @@ export default class DataSet extends EventManager {
           !this.dirty ||
           (await getConfig<Config>('confirm')($l('DataSet', 'unsaved_data_confirm')))
         ) {
-          await this.query(Math.floor(index / pageSize) + 1);
-          currentRecord = this.findInAllPage(index);
+          await this.query(Math.floor(index / pageSize) + 1, {}, append);
+          currentRecord = append ? this.get(index) : this.findInAllPage(index);
           if (currentRecord) {
             this.current = currentRecord;
             return currentRecord;
@@ -976,8 +984,8 @@ export default class DataSet extends EventManager {
    * 定位到下一页
    * @return Promise
    */
-  nextPage(): Promise<any> {
-    return this.page(this.currentPage + 1);
+  nextPage(append?: boolean): Promise<any> {
+    return this.page(this.currentPage + 1, append);
   }
 
   /**
@@ -1034,7 +1042,7 @@ export default class DataSet extends EventManager {
       if (
         records.length > 0 &&
         (await this.fireEvent(DataSetEvents.beforeDelete, { dataSet: this, records })) !== false &&
-        (await getConfig<Config>('confirm')(confirmMessage || $l('DataSet', 'delete_selected_row_confirm')))) {
+        (confirmMessage === false || (await getConfig<Config>('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_selected_row_confirm'))))) {
         this.remove(records);
         return this.pending.add(this.write(this.destroyed));
       }
@@ -1091,8 +1099,9 @@ export default class DataSet extends EventManager {
   @action
   async deleteAll(confirmMessage?) {
     if (
+      confirmMessage !== false &&
       this.records.length > 0 &&
-      (await getConfig<Config>('confirm')(confirmMessage || $l('DataSet', 'delete_all_row_confirm')))
+      (await getConfig<Config>('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_all_row_confirm')))
     ) {
       this.removeAll();
       return this.pending.add(this.write(this.destroyed));
@@ -1843,7 +1852,7 @@ Then the query method will be auto invoke.`,
           });
           if (submitEventResult) {
             const result: any[] = await axiosStatic.all(
-              axiosConfigs.map(config => this.axios(config)),
+              axiosConfigs.map(config => this.axios(fixAxiosConfig(config))),
             );
             return this.handleSubmitSuccess(result);
           }
@@ -1870,7 +1879,7 @@ Then the query method will be auto invoke.`,
             data: newConfig.data,
           });
           if (queryEventResult) {
-            const result = await this.axios(newConfig);
+            const result = await this.axios(fixAxiosConfig(newConfig));
             runInAction(() => {
               this.currentPage = page;
             });
