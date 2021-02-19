@@ -15,6 +15,7 @@ import axios from '../axios';
 import Record from './Record';
 import Field, { FieldProps, Fields } from './Field';
 import {
+  arrayMove,
   adapterDataToJSON,
   axiosConfigAdapter,
   checkParentByInsert,
@@ -1173,6 +1174,12 @@ export default class DataSet extends EventManager {
       }
     }
     return deleted;
+  }
+  /**
+   * 切换记录的顺序
+   */
+  move(from: number, to: number) {
+    arrayMove(this.records, from, to);
   }
 
   /**
