@@ -6,8 +6,7 @@ import isString from 'lodash/isString';
 import isNumber from 'lodash/isNumber';
 import omit from 'lodash/omit';
 import isPlainObject from 'lodash/isPlainObject';
-import { Config, getConfig } from '../configure';
-import warning from '../warning';
+import { getConfig } from 'choerodon-ui/lib/configure';
 import DataSet from './DataSet';
 import Field, { FieldProps, Fields } from './Field';
 import {
@@ -59,9 +58,39 @@ export default class Record {
 
   cascading = {};
 
-  @observable pristineData: object;
-
   @observable data: object;
+
+  @observable dirtyData: ObservableMap<string, any>;
+
+  @computed
+  get pristineData(): object {
+    const dirtyData = {};
+    [...this.dirtyData.entries()].forEach(([key, value]) => ObjectChainValue.set(dirtyData, key, value));
+    return merge({}, this.data, dirtyData);
+  }
+
+  set pristineData(data: object) {
+    runInAction(() => {
+      const { dirtyData } = this;
+      const dirtyKeys = [...dirtyData.keys()];
+      if (dirtyKeys.length) {
+        const newData = {};
+        dirtyKeys.forEach((key) => {
+          const item = ObjectChainValue.get(this.data, key);
+          ObjectChainValue.set(newData, key, item);
+          const newItem = ObjectChainValue.get(data, key);
+          if (isSame(item, newItem)) {
+            dirtyData.delete(key);
+          } else {
+            dirtyData.set(key, newItem);
+          }
+        });
+        this.data = merge({}, data, newData);
+      } else {
+        this.data = data;
+      }
+    });
+  }
 
   @observable status: RecordStatus;
 
@@ -207,7 +236,7 @@ export default class Record {
   }
 
   @computed
-  get recordsIncludeDelete(): Record[] {
+  get records(): Record[] {
     const { dataSet } = this;
     if (dataSet) {
       const { cascadeParent } = this;
@@ -215,19 +244,6 @@ export default class Record {
         return cascadeParent.getCascadeRecordsIncludeDelete(dataSet.parentName) || [];
       }
       return dataSet.records;
-    }
-    return [];
-  }
-
-  @computed
-  get records(): Record[] {
-    const { dataSet } = this;
-    if (dataSet) {
-      const { cascadeParent } = this;
-      if (cascadeParent && !cascadeParent.isCurrent) {
-        return cascadeParent.getCascadeRecords(dataSet.parentName) || [];
-      }
-      return dataSet.data;
     }
     return [];
   }
@@ -276,8 +292,8 @@ export default class Record {
 
   @computed
   get dirty(): boolean {
-    const { fields, status, dataSet } = this;
-    if (status === RecordStatus.update || [...fields.values()].some(({ dirty }) => dirty)) {
+    const { fields, status, dataSet, dirtyData } = this;
+    if (status === RecordStatus.update || dirtyData.size > 0 || [...fields.values()].some(({ dirty }) => dirty)) {
       return true;
     }
     if (dataSet) {
@@ -313,6 +329,7 @@ export default class Record {
       this.isCached = false;
       this.id = IDGen.next().value;
       this.data = initData;
+      this.dirtyData = observable.map<string, any>();
       if (dataSet) {
         this.dataSet = dataSet;
         const { fields } = dataSet;
@@ -320,9 +337,7 @@ export default class Record {
           this.initFields(fields);
         }
       }
-      const d = this.processData(initData);
-      this.pristineData = d;
-      this.data = d;
+      this.data = this.processData(initData);
     });
   }
 
@@ -352,7 +367,7 @@ export default class Record {
     return {
       ...this.toData(true, noCascade, isCascadeSelect, false),
       __id: this.id,
-      [getConfig<Config>('statusKey')]: getConfig<Config>('status')[
+      [getConfig('statusKey')]: getConfig('status')[
         status === RecordStatus.sync ? RecordStatus.update : status
         ],
     };
@@ -360,6 +375,7 @@ export default class Record {
 
   validate(all?: boolean, noCascade?: boolean): Promise<boolean> {
     const { dataSetSnapshot, dataSet, status, fields } = this;
+    // @ts-ignore
     return Promise.all([
       ...[...fields.values()].map(field =>
         all || status !== RecordStatus.sync ? field.checkValidity() : true,
@@ -449,16 +465,10 @@ export default class Record {
   set(item: string | object, value?: any): Record {
     if (isString(item)) {
       let fieldName: string = item;
+      const oldName = fieldName;
       const field = this.getField(fieldName) || this.addField(fieldName);
-      const cascadeParentBind = field.get('cascadeParentBind');
-      const cascadeParentFieldBind = field.get('cascadeParentFieldBind');
-      if (cascadeParentBind || cascadeParentFieldBind) {
-        warning(false, `Warning: field<${fieldName}>'s value could not be changed, because of it is a cascade parent binding field.`);
-        return this;
-      }
       checkFieldType(value, field);
       const bind = field.get('bind');
-      const oldName = fieldName;
       if (bind) {
         fieldName = bind;
       }
@@ -467,13 +477,16 @@ export default class Record {
       if (!isSame(newValue, oldValue)) {
         const { fields } = this;
         ObjectChainValue.set(this.data, fieldName, newValue, fields);
-        const pristineValue = toJS(this.getPristineValue(fieldName));
-        if (isSame(pristineValue, newValue)) {
-          if (this.status === RecordStatus.update && [...fields.values()].every(f => !f.dirty)) {
+        if (!(this.dirtyData.has(fieldName))) {
+          this.dirtyData.set(fieldName, oldValue);
+          if (this.status === RecordStatus.sync) {
+            this.status = RecordStatus.update;
+          }
+        } else if (isSame(toJS(this.dirtyData.get(fieldName)), newValue)) {
+          this.dirtyData.delete(fieldName);
+          if (this.status === RecordStatus.update && this.dirtyData.size === 0 && [...fields.values()].every(f => !f.dirty)) {
             this.status = RecordStatus.sync;
           }
-        } else if (this.status === RecordStatus.sync) {
-          this.status = RecordStatus.update;
         }
         const { dataSet } = this;
         if (dataSet) {
@@ -505,30 +518,23 @@ export default class Record {
   }
 
   getPristineValue(fieldName?: string): any {
-    return getRecordValue.call(
-      this,
-      this.pristineData,
-      (child, checkField) => child.getPristineValue(checkField),
-      fieldName,
-    );
+    return fieldName && this.dirtyData.has(fieldName) ? this.dirtyData.get(fieldName) : this.get(fieldName);
   }
 
   @action
   init(item: string | object, value?: any): Record {
-    const { fields, pristineData, data } = this;
+    const { fields, data, dirtyData } = this;
     if (isString(item)) {
-      const fieldName: string = item;
+      let fieldName: string = item;
       const field = this.getField(fieldName) || this.addField(fieldName);
       const newValue = processValue(value, field);
-      const cascadeParentBind = field.get('cascadeParentBind');
-      const cascadeParentFieldBind = field.get('cascadeParentFieldBind');
-      if (cascadeParentBind || cascadeParentFieldBind) {
-        warning(false, `Warning: field<${fieldName}>'s value could not be init, because of it is a cascade parent binding field.`);
-        return this;
+      const bind = field.get('bind');
+      if (bind) {
+        fieldName = bind;
       }
-      const bind = field.get('bind') || fieldName;
-      ObjectChainValue.set(pristineData, bind, newValue, fields);
-      ObjectChainValue.set(data, bind, newValue, fields);
+
+      dirtyData.delete(fieldName);
+      ObjectChainValue.set(data, fieldName, newValue, fields);
       field.commit();
     } else if (isPlainObject(item)) {
       Object.keys(item).forEach(key => this.init(key, item[key]));
@@ -555,7 +561,7 @@ export default class Record {
 
   @action
   async tls(name?: string): Promise<void> {
-    const tlsKey = getConfig<Config>('tlsKey');
+    const tlsKey = getConfig('tlsKey');
     const { dataSet } = this;
     if (dataSet && name) {
       const tlsData = this.get(tlsKey) || {};
@@ -572,7 +578,7 @@ export default class Record {
         if (newConfig.url && !this.isNew) {
           const result = await axios(newConfig);
           if (result) {
-            const dataKey = getConfig<Config>('dataKey');
+            const dataKey = getConfig('dataKey');
             this.commitTls(generateResponseData(result, dataKey)[0], name);
           }
         } else {
@@ -637,7 +643,7 @@ export default class Record {
 
   @action
   commit(data?: object, dataSet?: DataSet): Record {
-    const { dataSetSnapshot, fields, isRemoved, recordsIncludeDelete: records, isNew } = this;
+    const { dataSetSnapshot, fields, isRemoved, records, isNew } = this;
     if (dataSet) {
       if (isRemoved) {
         const index = records.indexOf(this);
@@ -710,7 +716,7 @@ export default class Record {
   private commitTls(data = {}, name: string) {
     const { dataSet } = this;
     const lang = dataSet ? dataSet.lang : localeContext.locale.lang;
-    const tlsKey = getConfig<Config>('tlsKey');
+    const tlsKey = getConfig('tlsKey');
     const values: object = {};
     if (!(name in data)) {
       data[name] = {};
@@ -733,11 +739,12 @@ export default class Record {
   @action
   private addField(name: string, fieldProps: FieldProps = {}): Field {
     const { dataSet } = this;
+    fieldProps.name = name;
     return processIntlField(
       name,
       fieldProps,
       (langName, langProps) => {
-        const field = new Field({ ...langProps, name: langName }, dataSet, this);
+        const field = new Field(langProps, dataSet, this);
         this.fields.set(langName, field);
         return field;
       },
@@ -749,9 +756,8 @@ export default class Record {
     const { fields } = this;
     const newData = { ...data };
     [...fields.entries()].forEach(([fieldName, field]) => {
-      let value = ObjectChainValue.get(data, fieldName);
+      let value = ObjectChainValue.get(newData, fieldName);
       const bind = field.get('bind');
-      // const type = field.get('type');
       const transformResponse = field.get('transformResponse');
       if (bind) {
         fieldName = bind;
@@ -760,9 +766,6 @@ export default class Record {
           value = bindValue;
         }
       }
-      // if (value === undefined && type === FieldType.boolean) {
-      //   value = false;
-      // }
       if (transformResponse) {
         value = transformResponse(value, data);
       }
@@ -812,27 +815,15 @@ export default class Record {
         items.forEach(field => {
           const { name } = field;
           let value = ObjectChainValue.get(json, name);
-          const cascadeParentBind = field.get('cascadeParentBind');
-          const cascadeParentFieldBind = field.get('cascadeParentFieldBind');
-
-          if ((cascadeParentBind || cascadeParentFieldBind) && this.cascadeParent) {
-            const parentData = this.cascadeParent.toData(true, true);
-            if (cascadeParentBind) {
-              value = parentData;
-            } else {
-              value = parentData[cascadeParentFieldBind];
-            }
-          } else {
-            const bind = field.get('bind');
-            const multiple = field.get('multiple');
-            if (bind) {
-              value = this.get(bind);
-            }
-            if (isString(multiple) && isArrayLike(value)) {
-              value = value.map(processToJSON).join(multiple);
-            }
-          }
+          const bind = field.get('bind');
+          const multiple = field.get('multiple');
           const transformRequest = field.get('transformRequest');
+          if (bind) {
+            value = this.get(bind);
+          }
+          if (isString(multiple) && isArrayLike(value)) {
+            value = value.map(processToJSON).join(multiple);
+          }
           if (transformRequest) {
             value = transformRequest(value, this);
           }
