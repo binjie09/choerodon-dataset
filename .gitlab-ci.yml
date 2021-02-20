@@ -6,12 +6,12 @@ stages:
 build:
   stage: build
   script:
-    - npm install --registry https://nexus.gobuildrun.com/repository/br_npm/ --sass-binary-site=http://npm.taobao.org/mirrors/node-sass
+    - npm install --registry http://nexus.saas.hand-china.com/repository/yqcloud-npm-group/ --sass-binary-site=http://npm.taobao.org/mirrors/node-sass
     - chmod -R 755 node_modules
     - npm run compile
     - npm run pre-publish
     - echo '//${NPM_REGISTRY}:_authToken=${NPM_TOKEN}'>.npmrc
-    - npm publish --registry https://nexus.gobuildrun.com/repository/br_private_npm/
+    - npm publish --registry http://${NPM_REGISTRY}
   only:
     refs:
       - master
@@ -21,11 +21,11 @@ build:
 release:
   stage: build
   script:
-    - npm install --registry https://nexus.gobuildrun.com/repository/br_npm/ --sass-binary-site=http://npm.taobao.org/mirrors/node-sass
+    - npm install --registry http://nexus.saas.hand-china.com/repository/yqcloud-npm-group/ --sass-binary-site=http://npm.taobao.org/mirrors/node-sass
     - chmod -R 755 node_modules
     - npm run compile
     - echo '//${NPM_REGISTRY}:_authToken=${NPM_TOKEN}'>.npmrc
-    - npm publish --registry https://nexus.gobuildrun.com/repository/br_private_npm/
+    - npm publish --registry http://${NPM_REGISTRY}
   only:
     refs:
       - tags
