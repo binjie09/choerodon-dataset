@@ -6,7 +6,7 @@ import isString from 'lodash/isString';
 import isNumber from 'lodash/isNumber';
 import omit from 'lodash/omit';
 import isPlainObject from 'lodash/isPlainObject';
-import { getConfig } from 'choerodon-ui/lib/configure';
+import { getConfig } from '../configure';
 import DataSet from './DataSet';
 import Field, { FieldProps, Fields } from './Field';
 import {

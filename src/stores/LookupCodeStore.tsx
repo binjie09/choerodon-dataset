@@ -1,7 +1,7 @@
 import { action } from 'mobx';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
 import isString from 'lodash/isString';
-import { getConfig } from 'choerodon-ui/lib/configure';
+import { getConfig } from '../configure';
 import axios from '../axios';
 import Field from '../data-set/Field';
 import lovCodeStore from './LovCodeStore';
