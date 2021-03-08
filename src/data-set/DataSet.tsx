@@ -15,6 +15,7 @@ import axios from '../axios';
 import Record from './Record';
 import Field, { FieldProps, Fields } from './Field';
 import {
+  arrayMove,
   adapterDataToJSON,
   axiosConfigAdapter,
   checkParentByInsert,
@@ -32,6 +33,8 @@ import {
   sortTree,
   useCascade,
   useSelected,
+  sliceTree,
+  findRootParent,
 } from './utils';
 import EventManager from '../event-manager';
 import DataSetSnapshot from './DataSetSnapshot';
@@ -153,7 +156,7 @@ export interface DataSetProps {
   /**
    * 前端分页、后端分页还是不分页
    */
-  paging?: boolean;
+  paging?: boolean | 'server';
   /**
    * 查询返回的json中对应的数据的key
    * @default "rows"
@@ -563,6 +566,16 @@ export default class DataSet extends EventManager {
     if (current) {
       const index = this.indexOf(current);
       if (index !== -1) {
+        if(this.paging === 'server'){
+          const currentParent = findRootParent(current)
+          let parentIndex = -1
+          this.treeData.forEach((item,indexTree) => {
+            if(this.indexOf(item) === this.indexOf(currentParent)){
+              parentIndex = indexTree;
+            }
+          })
+          return parentIndex;
+        }
         return index + (currentPage - 1) * pageSize;
       }
     }
@@ -596,9 +609,9 @@ export default class DataSet extends EventManager {
   }
 
   @computed
-  get paging(): boolean {
+  get paging(): boolean | 'server' {
     const { idField, parentField, paging } = this.props;
-    return (parentField === undefined || idField === undefined) && paging!;
+    return (paging === `server`)&&parentField&&idField ? paging : (parentField === undefined || idField === undefined) && !!paging! ;
   }
 
   set paging(paging) {
@@ -893,7 +906,7 @@ export default class DataSet extends EventManager {
       return this.locate((page - 1) * this.pageSize + this.created.length - this.destroyed.length, append);
     }
     warning(page > 0, 'Page number is incorrect.');
-    warning(this.paging, 'Can not paging query util the property<paging> of DataSet is true.');
+    warning(!!this.paging, 'Can not paging query util the property<paging> of DataSet is true.');
     return Promise.resolve();
   }
 
@@ -910,15 +923,15 @@ export default class DataSet extends EventManager {
       this.current = currentRecord;
       return currentRecord;
     }
-    if (paging === true) {
-      if (index >= 0 && index < totalCount + this.created.length - this.destroyed.length) {
+    if (paging === true || paging === 'server') {
+      if (index >= 0 && index < totalCount + this.created.length - this.destroyed.length ) {
         if (
           !modifiedCheck ||
           !this.dirty ||
           (await getConfig<Config>('confirm')($l('DataSet', 'unsaved_data_confirm')))
         ) {
-          await this.query(Math.floor(index / pageSize) + 1, {}, append);
-          currentRecord = append ? this.get(index) : this.findInAllPage(index);
+          await this.query(Math.floor(index / pageSize) + 1);
+          currentRecord = this.findInAllPage(index);
           if (currentRecord) {
             this.current = currentRecord;
             return currentRecord;
@@ -1173,6 +1186,12 @@ export default class DataSet extends EventManager {
       }
     }
     return deleted;
+  }
+  /**
+   * 切换记录的顺序
+   */
+  move(from: number, to: number) {
+    arrayMove(this.records, from, to);
   }
 
   /**
@@ -1682,13 +1701,27 @@ Then the query method will be auto invoke.`,
       pageSize,
       props: { autoLocateFirst, idField, parentField },
     } = this;
-    allData = paging ? allData.slice(0, pageSize) : allData;
+    switch(paging){
+      case true:
+        allData = allData.slice(0, pageSize);
+      break;
+      case 'server':
+        allData = idField && parentField ? sliceTree(idField,parentField,allData,pageSize) : allData.slice(0, pageSize);
+        break;
+      default:
+        break;
+    }
     this.fireEvent(DataSetEvents.beforeLoad, { dataSet: this, data: allData });
     this.originalData = this.processData(allData);
     this.records = this.originalData;
-    if (total !== undefined && paging === true) {
+    if (total !== undefined && (paging === true || paging === 'server')) {
       this.totalCount = total;
-    } else {
+    }else if(idField && parentField && paging === 'server'){
+      // 异步情况复用以前的total
+      if(!this.totalCount){
+        this.totalCount = this.treeData.length
+      }
+    } else{
       this.totalCount = allData.length;
     }
     this.releaseCachedSelected();
@@ -1739,12 +1772,18 @@ Then the query method will be auto invoke.`,
     return record;
   }
 
+  // 查询在所有页面的对应位置
   private findInAllPage(index: number): Record | undefined {
     const { paging } = this;
-    if (paging === true) {
-      index = this.getIndexInCurrentPage(index);
-    }
-    return this.data[index];
+    let indexRecord
+    if (paging === true ) {
+      indexRecord = this.data[this.getIndexInCurrentPage(index)];
+    }else if(paging === 'server'){
+      indexRecord  = this.treeData[this.getIndexInCurrentPage(index)];
+    }else{
+      indexRecord = this.data[index]
+    };
+    return indexRecord;
   }
 
   private getIndexInCurrentPage(index: number = this.currentIndex): number {
@@ -2089,7 +2128,7 @@ Then the query method will be auto invoke.`,
 
   private generatePageQueryString(page: number) {
     const { paging, pageSize } = this;
-    if (paging === true) {
+    if (paging === true || paging === 'server') {
       return { page, pagesize: pageSize };
     }
     return {};

@@ -1,4 +1,5 @@
 export enum DataSetEvents {
+  validate = 'validate',
   query = 'query',
   beforeLoad = 'beforeLoad',
   beforeAppend = 'beforeAppend',
@@ -99,4 +100,9 @@ export enum DataToJSON {
   'selected-self' = 'selected-self',
   'all-self' = 'all-self',
   'normal-self' = 'normal-self',
+}
+
+export const enum ExportMode {
+  server = 'server',
+  client = 'client',
 }
