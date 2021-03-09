@@ -261,7 +261,7 @@ export default class DataSet extends EventManager {
     autoCreate: false,
     autoQuery: false,
     autoQueryAfterSubmit: true,
-    autoLocateFirst: false,
+    autoLocateFirst: true,
     autoLocateAfterCreate: true,
     autoLocateAfterRemove: true,
     validateBeforeQuery: true,
