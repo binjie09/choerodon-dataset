@@ -830,9 +830,25 @@ export default class DataSet extends EventManager {
     return this.pending.add(this.doQuery(page, params, append));
   }
 
+  /**
+   * 查询更多记录，查询到的结果会拼接到原有数据之后
+   * @param page 页码
+   * @param params 查询参数
+   * @return Promise
+   */
+  queryMore(page?: number, params?: object): Promise<any> {
+    return this.pending.add(this.doQueryMore(page, params));
+  }
+
   async doQuery(page?: number, params?: object, append?: boolean): Promise<any> {
     const data = await this.read(page, params);
     this.loadDataFromResponse(data, append);
+    return data;
+  }
+
+  async doQueryMore(page, params?: object): Promise<any> {
+    const data = await this.read(page, params);
+    this.appendDataFromResponse(data);
     return data;
   }
 
@@ -1863,6 +1879,16 @@ Then the query method will be auto invoke.`,
       }
     }
     return this;
+  }
+
+  private appendDataFromResponse(resp: any): DataSet {
+    if (resp) {
+      const { dataKey } = this;
+      const data: object[] = generateResponseData(resp, dataKey);
+      this.appendData(data);
+    }
+    return this;
+
   }
 
   // private groupData(allData: object[]): object[] {
