@@ -10,8 +10,8 @@ const locale: Locale = {
     delete_all_row_confirm: '确认删除所有行？',
     query_success: '查询成功',
     query_failure: '查询失败',
-    submit_success: '提交成功',
-    submit_failure: '提交失败',
+    submit_success: '保存成功',
+    submit_failure: '保存失败',
     cannot_add_record_when_head_no_current: '头未选中记录，不能新建行记录',
   },
   Validator: {

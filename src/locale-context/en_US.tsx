@@ -10,7 +10,7 @@ const locale: Locale = {
     delete_all_row_confirm: 'Are you sure to delete all rows?',
     query_success: 'Query successfully.',
     query_failure: 'Fail to query data.',
-    submit_success: 'Submit successfully.',
+    submit_success: 'Save successfully.',
     submit_failure: 'Fail to submit data.',
     cannot_add_record_when_head_no_current: `Can't create new row record when head record unselected.`,
   },
