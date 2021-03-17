@@ -52,4 +52,6 @@ export type LovConfig = {
   placeholder?: string;
   editableFlag?: 'Y' | 'N';
   queryColumns?: number;
+  multipleFlag?: boolean;
+  delayLoadFlag?: boolean;
 };
