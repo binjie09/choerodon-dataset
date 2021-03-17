@@ -6,7 +6,7 @@ import warning from '../warning';
 import DataSet, { DataSetProps } from '../data-set/DataSet';
 import axios from '../axios';
 import Field, { FieldProps } from '../data-set/Field';
-import { FieldType } from '../data-set/enum';
+import { FieldType, DataSetSelection } from '../data-set/enum';
 import { LovConfig, LovConfigItem} from '../interfaces';
 import { processAxiosConfig } from './utils';
 import { TransportHookProps } from '../data-set/Transport';
@@ -149,13 +149,16 @@ export class LovCodeStore {
   getLovDataSet(code: string, field?: Field): DataSet | undefined {
     const config = this.getConfig(code);
     if (config) {
-      const { lovPageSize, lovItems, parentIdField, idField, valueField, treeFlag } = config;
+
+      const { lovPageSize, lovItems, parentIdField, idField, valueField, treeFlag, multipleFlag, delayLoadFlag } = config;
       const dataSetProps: DataSetProps = {
         transport: {
           read: this.getQueryAxiosConfig(code, field, config),
         },
         primaryKey: valueField,
         cacheSelection: true,
+        selection: multipleFlag ? DataSetSelection.multiple : DataSetSelection.single,
+        autoQuery: !delayLoadFlag,
       };
       if (!isNil(lovPageSize) && !isNaN(Number(lovPageSize))) {
         dataSetProps.pageSize = Number(lovPageSize);
