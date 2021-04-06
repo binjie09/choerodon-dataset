@@ -66,7 +66,7 @@ export default class Record {
   get pristineData(): object {
     const dirtyData = {};
     [...this.dirtyData.entries()].forEach(([key, value]) => ObjectChainValue.set(dirtyData, key, value));
-    return merge({}, this.data, dirtyData);
+    return merge({}, {}, dirtyData);
   }
 
   set pristineData(data: object) {
