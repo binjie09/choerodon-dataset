@@ -7,6 +7,7 @@ import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
 import isArray from 'lodash/isArray';
 import isNumber from 'lodash/isNumber';
+import _isEmpty from 'lodash/isEmpty';
 import warning from '../warning';
 import { Config, getConfig } from '../configure';
 import isNil from 'lodash/isNil';
@@ -20,6 +21,14 @@ import localeContext, { $l } from '../locale-context';
 import { SubmitTypes, TransportType, TransportTypes } from './Transport';
 import formatString from '../format-string';
 import { Lang } from '../locale-context/enum';
+import formatNumber from '../formatter/formatNumber';
+import formatCurrency from '../formatter/formatCurrency';
+import { getPrecision } from '../number-utils';
+
+export type FormatNumberFuncOptions = {
+  lang?: string,
+  options?: Intl.NumberFormatOptions;
+};
 
 export function useNormal(dataToJSON: DataToJSON): boolean {
   return [DataToJSON.normal, DataToJSON['normal-self']].includes(dataToJSON);
@@ -59,7 +68,7 @@ export function processToJSON(value) {
     value = moment(value);
   }
   if (isMoment(value)) {
-    const { jsonDate } = getConfig<Config>('formatter');
+    const { jsonDate } = getConfig('formatter');
     value = jsonDate ? value.format(jsonDate) : +value;
   }
   return value;
@@ -121,7 +130,7 @@ function processOne(value: any, field: Field, checkRange: boolean = true) {
         case FieldType.week:
         case FieldType.month:
         case FieldType.year: {
-          const { jsonDate } = getConfig<Config>('formatter');
+          const { jsonDate } = getConfig('formatter');
           value = jsonDate ? moment(value, jsonDate) : moment(value);
           break;
         }
@@ -155,6 +164,97 @@ export function processValue(value: any, field?: Field): any {
   return value;
 }
 
+// 处理单个range
+const processRangeToText = (resultValue, field): string => {
+  return resultValue.map((item) => {
+    const valueRange = isMoment(item)
+      ? item.format()
+      : isObject(item)
+        ? item[field.get('textField')]
+        : item.toString();
+    return valueRange;
+  }).join(`~`);
+};
+
+export function processExportValue(value: any, field?: Field): any {
+  if (field) {
+    const multiple = field.get('multiple');
+    const range = field.get('range');
+    if (multiple) {
+      if (isEmpty(value)) {
+        value = [];
+      } else if (!isArray(value)) {
+        if (isString(multiple) && isString(value)) {
+          value = value.split(multiple);
+        } else {
+          value = [value];
+        }
+      }
+    }
+    if (isArray(value) && (multiple || !range)) {
+      if (field && !_isEmpty(field.lookup)) {
+        return value.map(item => field.getText(processOne(item, field))).join(',');
+      }
+      return value.map(item => {
+        const itemValue = processOne(item, field);
+        if (field && field.get('textField') && itemValue && isObject(itemValue)) {
+          return itemValue[field.get('textField')];
+        }
+        return itemValue;
+      }).join(',');
+    }
+    if (isArray(value) && multiple && range) {
+      if (field && !_isEmpty(field.lookup)) {
+        return value.map(item => field.getText(processRangeToText(processOne(item, field), field))).join(',');
+      }
+      return value.map(item => {
+        return processRangeToText(processOne(item, field), field);
+      }).join(',');
+    }
+    if (field && !_isEmpty(field.lookup)) {
+      return field.getText(processOne(value, field));
+    }
+    const resultValue = processOne(value, field);
+    if (isMoment(resultValue)) {
+      return resultValue.format();
+    }
+    if (field && field.get('textField') && resultValue && isObject(resultValue)) {
+      if (range && isArrayLike(resultValue)) {
+        return processRangeToText(resultValue, field);
+      }
+      return resultValue[field.get('textField')];
+    }
+    return resultValue;
+  }
+  return value;
+}
+
+/**
+ * 实现如果名字是带有属性含义`.`找到能够导出的值
+ * @param dataItem 一行数据
+ * @param name 对应的fieldname
+ * @param isBind 是否是从绑定获取值
+ */
+export function getSplitValue(dataItem: any, name: string, isBind: boolean = true): any {
+  const nameArray = name.split('.');
+  if (nameArray.length > 1) {
+    let levelValue = dataItem;
+    for (let i = 0; i < nameArray.length; i++) {
+      if (!isObject(levelValue)) {
+        break;
+      }
+      if (isBind || i !== 0) {
+        levelValue = levelValue[nameArray[i]];
+      }
+    }
+    return levelValue;
+  }
+  if (isBind) {
+    return dataItem[name];
+  }
+  return dataItem;
+}
+
 export function childrenInfoForDelete(json: {}, children: { [key: string]: DataSet }): {} {
   return Object.keys(children).reduce((data, name) => {
     const child = children[name];
@@ -185,11 +285,11 @@ export function sortTree(children: Record[], orderField: Field): Record[] {
 
 // 递归生成树获取树形结构数据
 function availableTree(idField, parentField, parentId, allData) {
-  let result = []
+  let result = [];
   allData.forEach(element => {
     if (element[parentField] === parentId) {
       const childresult = availableTree(idField, parentField, element[idField], allData);
-      result = result.concat(element).concat(childresult)
+      result = result.concat(element).concat(childresult);
     }
   });
   return result;
@@ -198,20 +298,20 @@ function availableTree(idField, parentField, parentId, allData) {
 
 // 获取单个页面能够展示的数据
 export function sliceTree(idField, parentField, allData, pageSize) {
-  let availableTreeData = []
+  let availableTreeData = [];
   if (allData.length) {
-    let parentLength = 0
+    let parentLength = 0;
     allData.forEach((item) => {
       if (item) {
         if (isNil(item[parentField]) && !isNil(idField) && parentLength < pageSize) {
-          parentLength++
-          const childresult = availableTree(idField, parentField, item[idField], allData)
-          availableTreeData = availableTreeData.concat(item).concat(childresult)
+          parentLength++;
+          const childresult = availableTree(idField, parentField, item[idField], allData);
+          availableTreeData = availableTreeData.concat(item).concat(childresult);
         }
       }
-    })
+    });
   }
-  return availableTreeData
+  return availableTreeData;
 }
 
 export function checkParentByInsert({ parent }: DataSet) {
@@ -284,6 +384,12 @@ export function checkFieldType(value: any, field: Field): boolean {
 
 let iframe;
 
+/**
+ * 目前定义为服务端请求的方法
+ * @param url 导出地址
+ * @param data 导出传递参数
+ * @param method 默认post请求
+ */
 export function doExport(url, data, method = 'post') {
   if (!iframe) {
     iframe = document.createElement('iframe');
@@ -314,6 +420,8 @@ export function findBindFields(myField: Field, fields: Fields, excludeSelf?: boo
   return [...fields.values()].filter(field => {
     if (field !== myField) {
       const bind = field.get('bind');
+      // 处理 addField 后校验问题
+      // return isString(bind) ? bind.startsWith(`${name}.`) : !excludeSelf;
       return isString(bind) && bind.startsWith(`${name}.`);
     }
     return !excludeSelf;
@@ -433,6 +541,7 @@ export function axiosConfigAdapter(
     params,
     method: 'post',
   };
+
   const { [type]: globalConfig, adapter: globalAdapter = defaultAxiosConfigAdapter } =
   getConfig('transport') || {};
   const { [type]: config, adapter } = dataSet.transport;
@@ -454,9 +563,9 @@ export function axiosConfigAdapter(
 // 查询顶层父亲节点
 export function findRootParent(children: Record) {
   if (children.parent) {
-    return findRootParent(children.parent)
+    return findRootParent(children.parent);
   }
-  return children
+  return children;
 }
 
 export function prepareForSubmit(
@@ -509,22 +618,6 @@ export function getRecordValue(
   if (fieldName) {
     const field = this.getField(fieldName);
     if (field) {
-      const cascadeParentBind = field.get('cascadeParentBind');
-      const cascadeParentFieldBind = field.get('cascadeParentFieldBind');
-      if (cascadeParentBind || cascadeParentFieldBind) {
-        const { cascadeParent } = this;
-        if (cascadeParent) {
-          if (cascadeParentBind) {
-            return cascadeParent.toData(true, true);
-          }
-          if (cascadeParentFieldBind) {
-            const bindValue = cascadeParent.get(cascadeParentFieldBind);
-            if (bindValue !== undefined) {
-              return bindValue;
-            }
-          }
-        }
-      }
       const bind = field.get('bind');
       if (bind) {
         fieldName = bind;
@@ -566,11 +659,11 @@ export function processIntlField(
   callback: (name: string, props: FieldProps) => Field,
   dataSet?: DataSet,
 ): Field {
-  const tlsKey = getConfig<Config>('tlsKey');
-  const { supports } = localeContext;
-  const languages = Object.keys(supports);
-  const { type, dynamicProps } = fieldProps;
-  if (type === FieldType.intl) {
+  if (fieldProps.type === FieldType.intl) {
+    const { dynamicProps } = fieldProps;
+    const tlsKey = getConfig('tlsKey');
+    const { supports } = localeContext;
+    const languages = Object.keys(supports);
     languages.forEach(language =>
       callback(`${tlsKey}.${name}.${language}`, {
         type: FieldType.string,
@@ -609,23 +702,42 @@ export function findBindFieldBy(myField: Field, fields: Fields, prop: string): F
   });
 }
 
-// export function processFieldValue(value, field: Field, lang: Lang, showValueIfNotFound?: boolean) {
-//   const { type } = field;
-//   if (type === FieldType.number) {
-//     const precision = getPrecision(value || 0);
-//     const options = {
-//       minimumFractionDigits: precision,
-//       maximumFractionDigits: precision,
-//     };
-//     return formatNumber(value, lang, options);
-//   }
-//   if (type === FieldType.currency) {
-//     return formatCurrency(value, lang, {
-//       currency: field.get('currency'),
-//     });
-//   }
-//   return field.getText(value, showValueIfNotFound);
-// }
+function processNumberOptions(field: Field, options: Intl.NumberFormatOptions) {
+  const precision = field.get('precision');
+  const numberGrouping = field.get('numberGrouping');
+  if (isNumber(precision)) {
+    options.minimumFractionDigits = precision;
+    options.maximumFractionDigits = precision;
+  }
+  if (numberGrouping === false) {
+    options.useGrouping = false;
+  }
+  return options;
+}
+
+export function processFieldValue(value, field: Field, defaultLang: Lang, showValueIfNotFound?: boolean) {
+  const { type } = field;
+  const formatterOptions: FormatNumberFuncOptions = field.get('formatterOptions') || {};
+  // @ts-ignore
+  const numberFieldFormatterOptions: FormatNumberFuncOptions = getConfig('numberFieldFormatterOptions') || {};
+  if (type === FieldType.number) {
+    const precisionInValue = getPrecision(value || 0);
+
+    return formatNumber(value, formatterOptions.lang || numberFieldFormatterOptions.lang || defaultLang, processNumberOptions(field, {
+      minimumFractionDigits: precisionInValue,
+      maximumFractionDigits: precisionInValue,
+      ...numberFieldFormatterOptions.options,
+      ...formatterOptions.options,
+    }));
+  }
+  if (type === FieldType.currency) {
+    return formatCurrency(value, formatterOptions.lang || defaultLang, processNumberOptions(field, {
+      currency: field.get('currency'),
+      ...formatterOptions.options,
+    }));
+  }
+  return field.getText(value, showValueIfNotFound);
+}
 
 export function getLimit(limit: any, record: Record) {
   if (isString(limit) && record.getField(limit)) {
