@@ -29,6 +29,7 @@ import { buildURLWithAxiosConfig } from '../axios/utils';
 import { getDateFormatByField } from '../data-set/utils';
 import { getLovPara } from '../stores/utils';
 import { LovConfig, TimeStep } from '../interfaces';
+import raf from 'raf';
 
 function isEqualDynamicProps(oldProps, newProps) {
   if (newProps === oldProps) {
@@ -428,8 +429,14 @@ export default class Field {
       this.record = record;
       this.pristineProps = props;
       this.props = props;
-      this.fetchLookup();
-      this.fetchLovConfig();
+      if (!this.getProp('options') && (!record || this.getProp('dynamicProps'))) {
+        raf(() => {
+          this.fetchLookup();
+          this.fetchLovConfig();
+        });
+      }
+      // this.fetchLookup();
+      // this.fetchLovConfig();
     });
   }
 
