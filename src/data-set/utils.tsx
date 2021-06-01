@@ -9,7 +9,7 @@ import isArray from 'lodash/isArray';
 import isNumber from 'lodash/isNumber';
 import _isEmpty from 'lodash/isEmpty';
 import warning from '../warning';
-import { Config, getConfig } from '../configure';
+import { getConfig } from '../configure';
 import isNil from 'lodash/isNil';
 import Field, { DynamicPropsArguments, FieldProps, Fields } from './Field';
 import { BooleanValue, DataToJSON, FieldType, RecordStatus, SortOrder } from './enum';
@@ -24,6 +24,8 @@ import { Lang } from '../locale-context/enum';
 import formatNumber from '../formatter/formatNumber';
 import formatCurrency from '../formatter/formatCurrency';
 import { getPrecision } from '../number-utils';
+import XLSX from 'xlsx';
+import { Group } from './DataSet';
 
 export type FormatNumberFuncOptions = {
   lang?: string,
@@ -141,13 +143,17 @@ function processOne(value: any, field: Field, checkRange: boolean = true) {
   return value;
 }
 
-export function processValue(value: any, field?: Field): any {
+export function processValue(value: any, field?: Field, init?: boolean): any {
   if (field) {
     const multiple = field.get('multiple');
     const range = field.get('range');
     if (multiple) {
       if (isEmpty(value)) {
-        value = [];
+        if (init) {
+          value = undefined;
+        } else {
+          value = [];
+        }
       } else if (!isArray(value)) {
         if (isString(multiple) && isString(value)) {
           value = value.split(multiple);
@@ -283,35 +289,37 @@ export function sortTree(children: Record[], orderField: Field): Record[] {
   return children;
 }
 
-// 递归生成树获取树形结构数据
-function availableTree(idField, parentField, parentId, allData) {
-  let result = [];
-  allData.forEach(element => {
-    if (element[parentField] === parentId) {
-      const childresult = availableTree(idField, parentField, element[idField], allData);
-      result = result.concat(element).concat(childresult);
-    }
-  });
-  return result;
-}
-
-
 // 获取单个页面能够展示的数据
-export function sliceTree(idField, parentField, allData, pageSize) {
-  let availableTreeData = [];
+export function sliceTree(idField: string, parentField: string, allData: object[], pageSize: number): object[] {
   if (allData.length) {
-    let parentLength = 0;
+    const parentMap = new Map();
+    const noParentChildren: [any, object][] = [];
+    const parent: object[] = [];
+    const children: object[] = [];
     allData.forEach((item) => {
-      if (item) {
-        if (isNil(item[parentField]) && !isNil(idField) && parentLength < pageSize) {
-          parentLength++;
-          const childresult = availableTree(idField, parentField, item[idField], allData);
-          availableTreeData = availableTreeData.concat(item).concat(childresult);
+      const id = item[idField];
+      const parentId = item[parentField];
+      if (!isNil(parentId)) {
+        if (parentMap.get(parentId)) {
+          children.push(item);
+        } else {
+          noParentChildren.push([parentId, item]);
         }
+      } else if (parent.length < pageSize) {
+        if (!isNil(id)) {
+          parentMap.set(id, item);
+        }
+        parent.push(item);
       }
     });
+    noParentChildren.forEach(([parentId, item]) => {
+      if (parentMap.get(parentId)) {
+        children.push(item);
+      }
+    });
+    return parent.concat(children);
   }
-  return availableTreeData;
+  return [];
 }
 
 export function checkParentByInsert({ parent }: DataSet) {
@@ -334,7 +342,7 @@ function getValueType(value: any): FieldType {
             : FieldType.auto;
 }
 
-function getBaseType(type: FieldType): FieldType {
+export function getBaseType(type: FieldType): FieldType {
   switch (type) {
     case FieldType.number:
     case FieldType.currency:
@@ -718,7 +726,6 @@ function processNumberOptions(field: Field, options: Intl.NumberFormatOptions) {
 export function processFieldValue(value, field: Field, defaultLang: Lang, showValueIfNotFound?: boolean) {
   const { type } = field;
   const formatterOptions: FormatNumberFuncOptions = field.get('formatterOptions') || {};
-  // @ts-ignore
   const numberFieldFormatterOptions: FormatNumberFuncOptions = getConfig('numberFieldFormatterOptions') || {};
   if (type === FieldType.number) {
     const precisionInValue = getPrecision(value || 0);
@@ -800,32 +807,88 @@ export function isDirtyRecord(record) {
   return record.status !== RecordStatus.sync || record.dirty;
 }
 
-export function getDateFormatByFieldType(type: FieldType) {
-  const formatter = getConfig<Config>('formatter');
-  switch (type) {
-    case FieldType.date:
-      return formatter.date;
-    case FieldType.dateTime:
-      return formatter.dateTime;
-    case FieldType.week:
-      return formatter.week;
-    case FieldType.month:
-      return formatter.month;
-    case FieldType.year:
-      return formatter.year;
-    case FieldType.time:
-      return formatter.time;
-    default:
-      return formatter.date;
+export function getSpliceRecord(records: Record[], inserts: Record[], fromRecord?: Record): Record | undefined {
+  if (fromRecord) {
+    if (inserts.includes(fromRecord)) {
+      return getSpliceRecord(records, inserts, records[records.indexOf(fromRecord) + 1]);
+    }
+    return fromRecord;
   }
 }
 
-export function getDateFormatByField(field?: Field, type?: FieldType): string {
-  if (field) {
-    return field.get('format') || getDateFormatByFieldType(type || field.type);
+// bugs in react native
+export function fixAxiosConfig(config: AxiosRequestConfig): AxiosRequestConfig {
+  const { method } = config;
+  if (method && method.toLowerCase() === 'get') {
+    delete config.data;
   }
-  if (type) {
-    return getDateFormatByFieldType(type);
+  return config;
+}
+
+const EMPTY_GROUP_KEY = '__empty_group__';
+
+export function normalizeGroups(groups: string[], records: Record[]): Group[] {
+  const optGroups: Group[] = [];
+  const restRecords: Record[] = [];
+  records.forEach((record) => {
+    let previousGroup: Group | undefined;
+    groups.every((key) => {
+      const label = record.get(key);
+      if (label !== undefined) {
+        if (!previousGroup) {
+          previousGroup = optGroups.find(item => item.value === label);
+          if (!previousGroup) {
+            previousGroup = {
+              name: key,
+              value: label,
+              records: [],
+              subGroups: [],
+            };
+            optGroups.push(previousGroup);
+          }
+        } else {
+          const { subGroups } = previousGroup;
+          previousGroup = subGroups.find(item => item.value === label);
+          if (!previousGroup) {
+            previousGroup = {
+              name: key,
+              value: label,
+              records: [],
+              subGroups: [],
+            };
+            subGroups.push(previousGroup);
+          }
+        }
+        return true;
+      }
+      return false;
+    });
+    if (previousGroup) {
+      const { records: groupRecords } = previousGroup;
+      groupRecords.push(record);
+    } else {
+      restRecords.push(record);
+    }
+  });
+  if (restRecords.length) {
+    optGroups.push({
+      name: EMPTY_GROUP_KEY,
+      value: undefined,
+      records: restRecords,
+      subGroups: [],
+    });
   }
-  return getConfig<Config>('formatter').jsonDate || moment.defaultFormat;
+  return optGroups;
+}
+
+/**
+ *
+ * @param data 导出需要导出的数据
+ * @param excelname 导出表单的名字
+ */
+export function exportExcel(data, excelName) {
+  const ws = XLSX.utils.json_to_sheet(data, { skipHeader: true }); /* 新建空workbook，然后加入worksheet */
+  const wb = XLSX.utils.book_new();  /* 新建book */
+  XLSX.utils.book_append_sheet(wb, ws); /* 生成xlsx文件(book,sheet数据,sheet命名) */
+  XLSX.writeFile(wb, `${excelName}.xlsx`); /* 写文件(book,xlsx文件名称) */
 }

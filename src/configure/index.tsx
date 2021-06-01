@@ -33,6 +33,13 @@ export type Formatter = {
 };
 
 export interface Config {
+  prefixCls?: string;
+  proPrefixCls?: string;
+  iconfontPrefix?: string;
+  ripple?: boolean;
+  collapseExpandIconPosition?: string;
+  collapseExpandIcon?: (panelProps: any) => any | 'text';
+  collapseTrigger?: string;
   lookupCache?: CacheOptions<string, AxiosPromise>;
   lookupUrl?: string | ((code: string) => string);
   lookupAxiosMethod?: string;
@@ -57,6 +64,10 @@ export interface Config {
     lovConfig: LovConfig | undefined,
     props: TransportHookProps,
   ) => AxiosRequestConfig);
+  lovTableProps?: any;
+  lovModalProps?: any;
+  lovTableCustomizable?: boolean;
+  lovAutoSelectSingle?: boolean;
   axios?: AxiosInstance;
   feedback?: FeedBack;
   dataKey?: string;
@@ -64,10 +75,58 @@ export interface Config {
   statusKey?: string;
   tlsKey?: string;
   status?: Status;
+  exportMode?: any;
+  labelLayout?: any;
+  queryBar?: any | any;
+  tableBorder?: boolean;
+  tableHighLightRow?: boolean;
+  tableParityRow?: boolean;
+  tableSelectedHighLightRow?: boolean;
+  tableRowHeight?: 'auto' | number;
+  tableColumnTooltip?: any;
+  tableColumnResizable?: boolean;
+  tableColumnHideable?: boolean;
+  tableColumnTitleEditable?: boolean;
+  tableDragColumnAlign?: any;
+  tableColumnDraggable?: boolean;
+  tableRowDraggable?: boolean;
+  tableExpandIcon?: (props: any) => any;
+  tableSpinProps?: any;
+  tableButtonProps?: any;
+  tableCommandProps?: any;
+  tableDefaultRenderer?: any;
+  tableColumnOnCell?: (props: any) => object;
+  tableShowSelectionTips?: boolean;
+  tableAlwaysShowRowBox?: boolean;
+  tableUseMouseBatchChoose?: boolean;
+  tableEditorNextKeyEnterDown?: boolean;
+  tableAutoFocus?: boolean;
+  tableKeyboard?: boolean;
+  tableFilterAdapter?: TransportProps;
+  tableFilterSuffix?: any[];
+  tableFilterSearchText?: string;
+  tableAutoHeightDiff?: number;
+  tableCustomizable?: boolean;
+  tableCustomizedSave?: (code: string, customized: any) => void;
+  tableCustomizedLoad?: (code: string) => Promise<any | null>;
+  pagination?: any | false;
+  modalSectionBorder?: boolean;
+  drawerSectionBorder?: boolean;
+  drawerTransitionName?: string;
+  modalAutoCenter?: boolean;
+  modalOkFirst?: boolean;
+  drawerOkFirst?: boolean;
+  modalButtonProps?: any;
+  modalKeyboard?: boolean;
+  modalMaskClosable?: string | boolean;
+  buttonFuncType?: any;
+  buttonColor?: any;
+  buttonTooltip?: any;
+  renderEmpty?: any;
+  highlightRenderer?: any;
   defaultValidationMessages?: ValidationMessages;
-  validationMessageFormatter?: ValidationMessageFormatter;
-  validationMessageReportFormatter?: ValidationMessageReportFormatter;
   transport?: TransportProps;
+  icons?: { [key: string]: string[]; } | string[];
   generatePageQuery?: (pageParams: {
     page?: number;
     pageSize?: number;
@@ -75,6 +134,44 @@ export interface Config {
     sortOrder?: string;
   }) => object;
   formatter?: Formatter;
+  dropdownMatchSelectWidth?: boolean;
+  selectOptionTooltip?: any;
+  selectReverse?: boolean;
+  selectPagingOptionContent?: string | any;
+  selectSearchable?: boolean;
+  useColon?: boolean;
+  excludeUseColonTagList?: string[];
+  textFieldAutoComplete?: 'on' | 'off';
+  resultStatusRenderer?: object;
+  numberFieldNonStrictStep?: boolean;
+  numberFieldFormatter?: any;
+  numberFieldFormatterOptions?: any;
+  labelTooltip?: any;
+  /**
+   * @deprecated
+   * 同 tableColumnDraggable
+   */
+  tableDragColumn?: boolean;
+  /**
+   * @deprecated
+   * 同 tableRowDraggable
+   */
+  tableDragRow?: boolean;
+  /**
+   * 是否显示长度信息
+   */
+  showLengthInfo?: boolean;
+  /**
+   * moment非法时显示Invalid date
+   */
+  showInvalidDate?: boolean;
+  /**
+   * 只有在空值时显示必填背景色和边框色
+   */
+  showRequiredColorsOnlyEmpty?: boolean;
+
+  validationMessageFormatter?: ValidationMessageFormatter;
+  validationMessageReportFormatter?: ValidationMessageReportFormatter;
   confirm: (message) => Promise<boolean>;
 }
 

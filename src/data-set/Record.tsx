@@ -1,4 +1,4 @@
-import { action, computed, isArrayLike, isObservableArray, observable, ObservableMap, runInAction, set, toJS } from 'mobx';
+import { action, computed, isArrayLike, isObservableArray, isObservableObject, observable, ObservableMap, runInAction, toJS } from 'mobx';
 import merge from 'lodash/merge';
 import isObject from 'lodash/isObject';
 import isNil from 'lodash/isNil';
@@ -7,7 +7,7 @@ import isNumber from 'lodash/isNumber';
 import omit from 'lodash/omit';
 import isPlainObject from 'lodash/isPlainObject';
 import { getConfig } from '../configure';
-import DataSet from './DataSet';
+import DataSet, { RecordValidationErrors } from './DataSet';
 import Field, { FieldProps, Fields } from './Field';
 import {
   axiosConfigAdapter,
@@ -31,6 +31,7 @@ import DataSetSnapshot from './DataSetSnapshot';
 import localeContext from '../locale-context';
 import { BooleanValue, DataSetEvents, FieldIgnore, FieldType, RecordStatus } from './enum';
 import isSame from '../is-same';
+import { treeReduce } from '../_util/treeUtils';
 
 /**
  * 记录ID生成器
@@ -41,7 +42,10 @@ const IDGen: IterableIterator<number> = (function* (start: number) {
   }
 })(1000);
 
-const EXPANDED_KEY = '__EXPANDED_KEY__';
+const EXPANDED_KEY = '__EXPANDED_KEY__';  // TODO:Symbol
+const SELECTABLE_KEY = '__SELECTABLE_KEY__';  // TODO:Symbol
+const SELECT_KEY = '__SELECT_KEY__';  // TODO:Symbol
+const UNSELECT_KEY = '__UNSELECT_KEY__';  // TODO:Symbol
 
 export default class Record {
   id: number;
@@ -52,11 +56,15 @@ export default class Record {
 
   memo?: object;
 
+  prepareForReport: { result?: boolean, timeout?: number } = {};
+
   dataSetSnapshot: { [key: string]: DataSetSnapshot } = {};
 
   cascadeRecordsMap: { [key: string]: Record[] } = {};
 
   cascading = {};
+
+  validating: boolean = false;
 
   @observable data: object;
 
@@ -95,15 +103,53 @@ export default class Record {
 
   @observable status: RecordStatus;
 
-  @observable selectable: boolean;
+  @computed
+  get selectable(): boolean {
+    return this.getState(SELECTABLE_KEY);
+  }
 
-  @observable isSelected: boolean;
+  set selectable(selectable: boolean) {
+    runInAction(() => {
+      if (!selectable) {
+        this.isSelected = false;
+      }
+      this.setState(SELECTABLE_KEY, selectable);
+    });
+  }
+
+  get isDataSetInAllPageSelection(): boolean {
+    const { dataSet } = this;
+    if (dataSet) {
+      return dataSet.isAllPageSelection;
+    }
+    return false;
+  }
+
+  @computed
+  get isSelected(): boolean {
+    if (this.isDataSetInAllPageSelection) {
+      return !this.getState(UNSELECT_KEY);
+    }
+    return this.getState(SELECT_KEY);
+  }
+
+  set isSelected(isSelected: boolean) {
+    if (this.isDataSetInAllPageSelection) {
+      this.setState(UNSELECT_KEY, !isSelected);
+    } else {
+      this.setState(SELECT_KEY, isSelected);
+    }
+  }
 
   @observable isCurrent: boolean;
 
   @observable isCached: boolean;
 
   @observable editing?: boolean;
+
+  @observable pending?: boolean;
+
+  @observable childrenLoaded?: boolean;
 
   @observable state: ObservableMap<string, any>;
 
@@ -129,6 +175,18 @@ export default class Record {
     const { dataSet } = this;
     if (dataSet) {
       return dataSet.indexOf(this);
+    }
+    return -1;
+  }
+
+  @computed
+  get indexInParent(): number {
+    const { parent, dataSet } = this;
+    if (parent && parent.children) {
+      return parent.children.indexOf(this);
+    }
+    if (dataSet) {
+      return dataSet.treeRecords.indexOf(this);
     }
     return -1;
   }
@@ -283,6 +341,20 @@ export default class Record {
   }
 
   @computed
+  get parents(): Record[] {
+    const { parent } = this;
+    if (parent) {
+      return [parent, ...parent.parents];
+    }
+    return [];
+  }
+
+  @computed
+  get path(): Record[] {
+    return [...this.parents, this];
+  }
+
+  @computed
   get level(): number {
     const { parent } = this;
     if (parent) {
@@ -318,12 +390,12 @@ export default class Record {
     return undefined;
   }
 
-  constructor(data: object = {}, dataSet?: DataSet) {
+  constructor(data: object = {}, dataSet?: DataSet, status: RecordStatus = RecordStatus.add) {
     runInAction(() => {
-      const initData = toJS(data);
+      const initData = isObservableObject(data) ? toJS(data) : data;
       this.state = observable.map<string, any>();
       this.fields = observable.map<string, Field>();
-      this.status = RecordStatus.add;
+      this.status = status;
       this.selectable = true;
       this.isSelected = false;
       this.isCurrent = false;
@@ -338,7 +410,7 @@ export default class Record {
           this.initFields(fields);
         }
       }
-      this.data = this.processData(initData);
+      this.processData(initData);
     });
   }
 
@@ -376,10 +448,10 @@ export default class Record {
 
   validate(all?: boolean, noCascade?: boolean): Promise<boolean> {
     const { dataSetSnapshot, dataSet, status, fields } = this;
-    // @ts-ignore
+    this.validating = true;
     return Promise.all([
       ...[...fields.values()].map(field =>
-        all || status !== RecordStatus.sync ? field.checkValidity() : true,
+        all || status !== RecordStatus.sync ? field.checkValidity(false) : true,
       ),
       ...(!noCascade && dataSet ? Object.keys(dataSet.children).map((key) => {
         const { children } = dataSet;
@@ -395,7 +467,44 @@ export default class Record {
           record.validate(false, !cascade),
         );
       }) : []),
-    ]).then(results => results.every(result => result));
+    ]).then((results) => {
+      const valid = results.every(result => result);
+      this.reportValidity(valid);
+      this.validating = false;
+      return valid;
+    }).catch((error) => {
+      this.validating = false;
+      throw error;
+    });
+  }
+
+  reportValidity(result: boolean) {
+    const { dataSet } = this;
+    if (dataSet && !dataSet.validating) {
+      const { prepareForReport } = this;
+      if (!result) {
+        prepareForReport.result = result;
+      }
+      if (prepareForReport.timeout) {
+        window.clearTimeout(prepareForReport.timeout);
+      }
+      prepareForReport.timeout = window.setTimeout(() => {
+        dataSet.reportValidity(prepareForReport.result || true);
+        this.prepareForReport = {};
+      }, 200);
+    }
+  };
+
+  getValidationErrors(): RecordValidationErrors[] {
+    return [...this.fields.values()].reduce<RecordValidationErrors[]>((results, field) => {
+      if (!field.valid) {
+        results.push({
+          field,
+          errors: field.getValidationErrorValues(),
+        });
+      }
+      return results;
+    }, []);
   }
 
   getField(fieldName?: string): Field | undefined {
@@ -475,7 +584,7 @@ export default class Record {
       }
       const oldValue = toJS(this.get(fieldName));
       const newValue = processValue(value, field);
-      if (!isSame(newValue, oldValue)) {
+      if (!isSame(processToJSON(oldValue), processToJSON(newValue))) {
         const { fields } = this;
         ObjectChainValue.set(this.data, fieldName, newValue, fields);
         if (!(this.dirtyData.has(fieldName))) {
@@ -510,7 +619,7 @@ export default class Record {
       findBindFields(field, this.fields).forEach(oneField => {
         // oneField.dirty = field.dirty,
         oneField.validator.reset();
-        oneField.checkValidity();
+        oneField.checkValidity(false);
       });
     } else if (isPlainObject(item)) {
       Object.keys(item).forEach(key => this.set(key, item[key]));
@@ -608,6 +717,7 @@ export default class Record {
     }
     if (isRemoved || dirty) {
       this.data = toJS(this.pristineData);
+      this.dirtyData.clear();
       this.memo = undefined;
       if (dataSet && !dataSet.resetInBatch) {
         dataSet.fireEvent(DataSetEvents.reset, { records: [this], dataSet });
@@ -663,14 +773,8 @@ export default class Record {
         }
       }
       if (data) {
-        const newData = this.processData(data, true);
-        this.pristineData = newData;
-        Object.keys(newData).forEach(key => {
-          const newValue = newData[key];
-          if (this.get(key) !== newValue) {
-            set(this.data, key, newData[key]);
-          }
-        });
+        this.processData(data, true);
+        this.pristineData = this.data;
         const { children } = dataSet;
         const keys = Object.keys(children);
         if (keys.length) {
@@ -713,6 +817,14 @@ export default class Record {
     return this.state.get(key);
   }
 
+
+  treeReduce<U>(
+    fn: (previousValue: U, record: Record) => U,
+    initialValue: U,
+  ): U {
+    return treeReduce<U, Record>([this], fn, initialValue);
+  }
+
   @action
   private commitTls(data = {}, name: string) {
     const { dataSet } = this;
@@ -738,7 +850,7 @@ export default class Record {
   }
 
   @action
-  private addField(name: string, fieldProps: FieldProps = {}): Field {
+  addField(name: string, fieldProps: FieldProps = {}): Field {
     const { dataSet } = this;
     fieldProps.name = name;
     return processIntlField(
@@ -753,16 +865,75 @@ export default class Record {
     );
   }
 
-  private processData(data: object = {}, needMerge?: boolean): object {
+  private getSortedFields(): [string, Field][] {
     const { fields } = this;
+    const normalFields: [string, Field][] = [];
+    const objectBindFields: [string, Field][] = [];
+    const bindFields: [string, Field][] = [];
+    const transformResponseField: [string, Field][] = [];
+    const dynamicFields: [string, Field][] = [];
+    const dynamicObjectBindFields: [string, Field][] = [];
+    const dynamicBindFields: [string, Field][] = [];
+    [...fields.entries()].forEach((entry) => {
+      const [, field] = entry;
+      const dynamicProps = field.get('computedProps') || field.get('dynamicProps');
+      if (dynamicProps) {
+        if (dynamicProps.bind) {
+          if (field.type === FieldType.object) {
+            dynamicObjectBindFields.push(entry);
+          } else {
+            dynamicBindFields.push(entry);
+          }
+        } else {
+          dynamicFields.push(entry);
+        }
+      } else {
+        const bind = field.get('bind');
+        if (bind) {
+          const targetNames = bind.split('.');
+          targetNames.pop();
+          if (targetNames.some((targetName) => {
+            const target = fields.get(targetName);
+            return target && (target.get('computedProps') || target.get('dynamicProps'));
+          })) {
+            if (field.type === FieldType.object) {
+              dynamicObjectBindFields.push(entry);
+            } else {
+              dynamicBindFields.push(entry);
+            }
+          } else if (field.get('transformResponse')) {
+            transformResponseField.push(entry);
+          } else if (field.type === FieldType.object) {
+            objectBindFields.push(entry);
+          } else {
+            bindFields.push(entry);
+          }
+        } else {
+          normalFields.push(entry);
+        }
+      }
+    });
+    return [
+      ...normalFields,
+      ...objectBindFields,
+      ...bindFields,
+      ...transformResponseField,
+      ...dynamicFields,
+      ...dynamicObjectBindFields,
+      ...dynamicBindFields,
+    ];
+  }
+
+  private processData(data: object = {}, needMerge?: boolean): void {
     const newData = { ...data };
-    [...fields.entries()].forEach(([fieldName, field]) => {
+    const { fields } = this;
+    this.getSortedFields().forEach(([fieldName, field]) => {
       let value = ObjectChainValue.get(newData, fieldName);
       const bind = field.get('bind');
       const transformResponse = field.get('transformResponse');
       if (bind) {
         fieldName = bind;
-        const bindValue = ObjectChainValue.get(data, fieldName);
+        const bindValue = ObjectChainValue.get(newData, fieldName);
         if (isNil(value) && !isNil(bindValue)) {
           value = bindValue;
         }
@@ -770,7 +941,7 @@ export default class Record {
       if (transformResponse) {
         value = transformResponse(value, data);
       }
-      value = processValue(value, field);
+      value = processValue(value, field, this.isNew);
       if (value === null) {
         value = undefined;
       }
@@ -781,8 +952,8 @@ export default class Record {
         }
       }
       ObjectChainValue.set(newData, fieldName, value, fields);
+      ObjectChainValue.set(this.data, fieldName, value, fields);
     });
-    return newData;
   }
 
   private normalizeData(needIgnore?: boolean) {

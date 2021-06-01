@@ -1,12 +1,12 @@
 import isNil from 'lodash/isNil';
 import { action, observable, ObservableMap, runInAction } from 'mobx';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { getConfig, Config } from '../configure';
+import { getConfig } from '../configure';
 import warning from '../warning';
 import DataSet, { DataSetProps } from '../data-set/DataSet';
 import axios from '../axios';
 import Field, { FieldProps } from '../data-set/Field';
-import { FieldType, DataSetSelection } from '../data-set/enum';
+import { FieldType } from '../data-set/enum';
 import { LovConfig, LovConfigItem} from '../interfaces';
 import { processAxiosConfig } from './utils';
 import { TransportHookProps } from '../data-set/Transport';
@@ -43,7 +43,6 @@ function generateConditionField(
     conditionFieldSelectTf,
     conditionFieldSelectVf,
     conditionFieldRequired,
-    queryFieldProps,
     fieldProps,
   }: LovConfigItem,
 ): void {
@@ -60,7 +59,6 @@ function generateConditionField(
       valueField: conditionFieldSelectVf || undefined,
       required: conditionFieldRequired || undefined,
       ...fieldProps,
-      ...queryFieldProps,
     };
     fields.push(field);
     if (conditionFieldType === LovFieldType.POPUP) {
@@ -95,7 +93,7 @@ export class LovCodeStore {
   pendings = {};
 
   get axios(): AxiosInstance {
-    return getConfig<Config>('axios') || axios;
+    return getConfig('axios') || axios;
   }
 
   constructor() {
@@ -109,8 +107,8 @@ export class LovCodeStore {
 
   getDefineAxiosConfig(code: string, field?: Field): AxiosRequestConfig | undefined {
     const lovDefineAxiosConfig =
-      (field && field.get('lovDefineAxiosConfig')) || getConfig<Config>('lovDefineAxiosConfig');
-    const config = processAxiosConfig(lovDefineAxiosConfig, code);
+      (field && field.get('lovDefineAxiosConfig')) || getConfig('lovDefineAxiosConfig');
+    const config = processAxiosConfig(lovDefineAxiosConfig, code, field);
     return {
       ...config,
       url: config.url || this.getConfigUrl(code, field),
@@ -146,28 +144,27 @@ export class LovCodeStore {
   }
 
   // lovCode 作为key 缓存了 ds
-  getLovDataSet(code: string, field?: Field): DataSet | undefined {
+  getLovDataSet(code: string, field?: Field, dataSetProps?: DataSetProps): DataSet | undefined {
     const config = this.getConfig(code);
     if (config) {
-
-      const { lovPageSize, lovItems, parentIdField, idField, valueField, treeFlag, multipleFlag, delayLoadFlag } = config;
-      const dataSetProps: DataSetProps = {
+      // @ts-ignore
+      const { lovPageSize, lovItems, parentIdField, idField, valueField, treeFlag, dataSetProps: configDataSetProps } = config;
+      const dsProps: DataSetProps = {
         transport: {
           read: this.getQueryAxiosConfig(code, field, config),
         },
         primaryKey: valueField,
         cacheSelection: true,
-        selection: multipleFlag ? DataSetSelection.multiple : DataSetSelection.single,
-        autoQuery: !delayLoadFlag,
+        autoLocateFirst: false,
       };
       if (!isNil(lovPageSize) && !isNaN(Number(lovPageSize))) {
-        dataSetProps.pageSize = Number(lovPageSize);
+        dsProps.pageSize = Number(lovPageSize);
       } else {
-        dataSetProps.paging = false;
+        dsProps.paging = false;
       }
       if (treeFlag === 'Y' && parentIdField && idField) {
-        dataSetProps.parentField = parentIdField;
-        dataSetProps.idField = idField;
+        dsProps.parentField = parentIdField;
+        dsProps.idField = idField;
       }
 
       if (lovItems && lovItems.length) {
@@ -185,20 +182,20 @@ export class LovCodeStore {
             { querys: [] as FieldProps[], fields: [] as FieldProps[] },
           );
         if (querys.length) {
-          dataSetProps.queryFields = querys;
+          dsProps.queryFields = querys;
         }
         if (fields.length) {
-          dataSetProps.fields = fields;
+          dsProps.fields = fields;
         }
       }
-      return new DataSet(dataSetProps);
+      return new DataSet({ ...dsProps, ...configDataSetProps, ...dataSetProps });
     }
     warning(false, `LOV: code<${code}> is not exists`);
     return undefined;
   }
 
   getConfigUrl(code: string, field?: Field): string {
-    const lovDefineUrl = (field && field.get('lovDefineUrl')) || getConfig<Config>('lovDefineUrl');
+    const lovDefineUrl = (field && field.get('lovDefineUrl')) || getConfig('lovDefineUrl');
     if (typeof lovDefineUrl === 'function') {
       return lovDefineUrl(code);
     }
@@ -208,11 +205,12 @@ export class LovCodeStore {
   getQueryAxiosConfig(code: string, field?: Field, config?: LovConfig) {
     return (props: TransportHookProps) => {
       const lovQueryAxiosConfig =
-        (field && field.get('lovQueryAxiosConfig')) || getConfig<Config>('lovQueryAxiosConfig');
-      const axiosConfig = processAxiosConfig(lovQueryAxiosConfig, code, config, props);
+        (field && field.get('lovQueryAxiosConfig')) || getConfig('lovQueryAxiosConfig');
+      const lovQueryUrl = this.getQueryUrl(code, field, props);
+      const axiosConfig = processAxiosConfig(lovQueryAxiosConfig, code, config, props, lovQueryUrl);
       return {
         ...axiosConfig,
-        url: axiosConfig.url || this.getQueryUrl(code, field, props),
+        url: axiosConfig.url || lovQueryUrl,
         method: axiosConfig.method || 'post',
       };
     };
@@ -227,7 +225,7 @@ export class LovCodeStore {
       }
     }
 
-    const lovQueryUrl = (field && field.get('lovQueryUrl')) || getConfig<Config>('lovQueryUrl');
+    const lovQueryUrl = (field && field.get('lovQueryUrl')) || getConfig('lovQueryUrl');
 
     if (typeof lovQueryUrl === 'function') {
       return lovQueryUrl(code, config, props);
