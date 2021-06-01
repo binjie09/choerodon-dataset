@@ -347,7 +347,18 @@ export default class DataSet extends EventManager {
 
   prepareForReport: { result?: boolean, timeout?: number } = {};
 
-  queryParameter: object;
+  @computed
+  get queryParameter(): object {
+    const queryParameterMap: ObservableMap<string, any> = this.getState(QUERY_PARAMETER);
+    if (queryParameterMap) {
+      return queryParameterMap.toPOJO();
+    }
+    return {};
+  }
+
+  set queryParameter(queryParameter: object) {
+    this.setState(QUERY_PARAMETER, observable.map(queryParameter));
+  }
 
   pending: PromiseQueue = new PromiseQueue();
 
