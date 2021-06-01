@@ -1,5 +1,5 @@
-import { action, computed, get, IReactionDisposer, isArrayLike, observable, runInAction, set, toJS, ObservableMap } from 'mobx';
-import axiosStatic, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import {action, computed, get, IReactionDisposer, isArrayLike, observable, ObservableMap, runInAction, set, toJS} from 'mobx';
+import axiosStatic, {AxiosInstance, AxiosRequestConfig} from 'axios';
 import omit from 'lodash/omit';
 import flatMap from 'lodash/flatMap';
 import isNumber from 'lodash/isNumber';
@@ -11,18 +11,19 @@ import isString from 'lodash/isString';
 import isPlainObject from 'lodash/isPlainObject';
 import debounce from 'lodash/debounce';
 import warning from '../warning';
-import { Config, getConfig } from '../configure';
-import localeContext, { $l } from '../locale-context';
+import {Config, getConfig} from '../configure';
+import localeContext, {$l} from '../locale-context';
 import axios from '../axios';
 import Record from './Record';
-import Field, { FieldProps, Fields } from './Field';
+import Field, {FieldProps, Fields} from './Field';
 import {
-  arrayMove,
   adapterDataToJSON,
+  arrayMove,
   axiosConfigAdapter,
   checkParentByInsert,
   doExport,
   findBindFieldBy,
+  findRootParent,
   generateData,
   generateJSONData,
   generateResponseData,
@@ -32,22 +33,21 @@ import {
   prepareForSubmit,
   prepareSubmitData,
   processIntlField,
+  sliceTree,
   sortTree,
   useCascade,
   useSelected,
-  sliceTree,
-  findRootParent,
 } from './utils';
 import EventManager from '../event-manager';
 import DataSetSnapshot from './DataSetSnapshot';
-import { DataSetEvents, DataSetSelection, DataSetStatus, DataToJSON, FieldType, RecordStatus, SortOrder } from './enum';
-import { Lang } from '../locale-context/enum';
+import {DataSetEvents, DataSetSelection, DataSetStatus, DataToJSON, FieldType, RecordStatus, SortOrder} from './enum';
+import {Lang} from '../locale-context/enum';
 import isEmpty from '../is-empty';
 import * as ObjectChainValue from '../object-chain-value';
-import Transport, { TransportProps } from './Transport';
+import Transport, {TransportProps} from './Transport';
 import PromiseQueue from '../promise-queue';
 import DataSetRequestError from './DataSetRequestError';
-import defaultFeedback, { FeedBack } from './FeedBack';
+import defaultFeedback, {FeedBack} from './FeedBack';
 
 function getSpliceRecord(records: Record[], inserts: Record[], fromRecord?: Record): Record | undefined {
   if (fromRecord) {
@@ -1875,6 +1875,22 @@ Then the query method will be auto invoke.`,
     if (queryFields) {
       queryDataSet = new DataSet({
         fields: queryFields,
+        children: {
+          condition: new DataSet({
+            paging: false,
+            fields: [{
+              name: 'field',
+              type: FieldType.string,
+              options: new DataSet({
+                paging: false,
+                data: queryFields.map(queryField => ({
+                  value: queryField.name,
+                  meaning: queryField.label || queryField.name
+                }))
+              }),
+            }],
+          })
+        }
       });
     }
     if (queryDataSet) {

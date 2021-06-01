@@ -1,5 +1,5 @@
 import capitalize from 'lodash/capitalize';
-import { FieldFormat, FieldTrim, FieldType } from '@choerodon/dataset/lib/data-set/enum';
+import { FieldFormat, FieldTrim, FieldType } from '../data-set/enum';
 
 let supportsLocales;
 
