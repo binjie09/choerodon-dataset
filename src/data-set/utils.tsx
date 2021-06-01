@@ -892,3 +892,31 @@ export function exportExcel(data, excelName) {
   XLSX.utils.book_append_sheet(wb, ws); /* 生成xlsx文件(book,sheet数据,sheet命名) */
   XLSX.writeFile(wb, `${excelName}.xlsx`); /* 写文件(book,xlsx文件名称) */
 }
+export function getDateFormatByFieldType(type: FieldType) {
+  const formatter = getConfig('formatter');
+  switch (type) {
+    case FieldType.date:
+      return formatter.date;
+    case FieldType.dateTime:
+      return formatter.dateTime;
+    case FieldType.week:
+      return formatter.week;
+    case FieldType.month:
+      return formatter.month;
+    case FieldType.year:
+      return formatter.year;
+    case FieldType.time:
+      return formatter.time;
+    default:
+      return formatter.date;
+  }
+}
+export function getDateFormatByField(field?: Field, type?: FieldType): string {
+  if (field) {
+    return field.get('format') || getDateFormatByFieldType(type || field.type);
+  }
+  if (type) {
+    return getDateFormatByFieldType(type);
+  }
+  return getConfig('formatter').jsonDate || moment.defaultFormat;
+}
