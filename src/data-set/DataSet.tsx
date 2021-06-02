@@ -2225,7 +2225,7 @@ Then the query method will be auto invoke.`,
       queryDataSet = new DataSet({
         fields: queryFields,
         children: {
-          condition: new DataSet({
+          __condition: new DataSet({
             paging: false,
             fields: [{
               name: 'field',
