@@ -553,12 +553,10 @@ export default class Field {
       this.dirtyProps = {};
       this.props = props;
       // 优化性能，没有动态属性时不用处理， 直接引用dsField； 有options时，也不处理
-      if (!this.getProp('options') && (!record || this.getProp('computedProps') || this.getProp('dynamicProps'))) {
-        raf(() => {
-          this.fetchLookup();
-          this.fetchLovConfig();
-        });
-      }
+      raf(() => {
+        this.fetchLookup();
+        this.fetchLovConfig();
+      });
     });
   }
 
@@ -999,19 +997,19 @@ export default class Field {
    * @param noCache default: undefined
    * @return Promise<object[]>
    */
-  fetchLookup(noCache = false): Promise<object[] | undefined> {
+  async fetchLookup(noCache = undefined): Promise<object[] | undefined> {
     const batch = this.get('lookupBatchAxiosConfig') || getConfig('lookupBatchAxiosConfig');
     const lookupCode = this.get('lookupCode');
     const lovPara = getLovPara(this, this.record);
     const dsField = this.findDataSetField();
-    let promise;
+    let result;
     if (batch && lookupCode && Object.keys(lovPara).length === 0) {
       if (dsField && dsField.get('lookupCode') === lookupCode) {
         this.set('lookup', undefined);
-        return Promise.resolve(dsField.get('lookup'));
+        return dsField.get('lookup');
       }
 
-      promise = this.pending.add<object[] | undefined>(
+      result = await this.pending.add<object[] | undefined>(
         lookupStore.fetchLookupDataInBatch(lookupCode, batch),
       );
     } else {
@@ -1023,26 +1021,25 @@ export default class Field {
           buildURLWithAxiosConfig(dsConfig) === buildURLWithAxiosConfig(axiosConfig)
         ) {
           this.set('lookup', undefined);
-          return Promise.resolve(dsField.get('lookup'));
+          return dsField.get('lookup');
         }
       }
       if (axiosConfig.url) {
-        promise = this.pending.add<object[] | undefined>(
+        result = await this.pending.add<object[] | undefined>(
           lookupStore.fetchLookupData(axiosConfig),
         );
       }
     }
-    if (promise) {
-      return promise.then(action((result) => {
+    if (result) {
+      runInAction(() => {
         const { lookup } = this;
         this.set('lookup', result);
         const value = this.getValue();
         const valueField = this.get('valueField');
         if (value && valueField && lookup) {
-          const values = this.get('multiple') ? [].concat(...value) : [].concat(value);
           this.set(
             'lookupData',
-            values.reduce<object[]>((lookupData, v) => {
+            [].concat(value).reduce<object[]>((lookupData, v) => {
               const found = lookup.find(item => isSameLike(item[valueField], v));
               if (found) {
                 lookupData.push(found);
@@ -1051,18 +1048,24 @@ export default class Field {
             }, []),
           );
         }
-        return result;
-      }));
+      });
     }
-    return Promise.resolve(undefined);
+    return result;
   }
 
-  fetchLovConfig() {
+  async fetchLovConfig() {
     const lovCode = this.get('lovCode');
     if (lovCode) {
-      this.pending.add(lovCodeStore.fetchConfig(lovCode, this));
+      await this.pending.add(lovCodeStore.fetchConfig(lovCode, this));
+      if (this.type === FieldType.object || this.type === FieldType.auto) {
+        const options = lovCodeStore.getLovDataSet(lovCode, this);
+        if (options) {
+          this.set('options', options);
+        }
+      }
     }
   }
+
 
   isValid() {
     return this.valid;
