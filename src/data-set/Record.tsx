@@ -587,7 +587,10 @@ export default class Record {
       if (!isSame(processToJSON(oldValue), processToJSON(newValue))) {
         const { fields } = this;
         ObjectChainValue.set(this.data, fieldName, newValue, fields);
-        if (!(this.dirtyData.has(fieldName))) {
+        // ignore不需要加到dirty中，因为dirty只用于判断提交变动，ignore是不需要提交的字段，就不用变dirty了
+        const isIgnore = this.getField(fieldName)?.get('ignore');
+
+        if (!(this.dirtyData.has(fieldName)) && !isIgnore) {
           this.dirtyData.set(fieldName, oldValue);
           if (this.status === RecordStatus.sync) {
             this.status = RecordStatus.update;
