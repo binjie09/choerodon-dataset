@@ -1200,7 +1200,7 @@ export default class DataSet extends EventManager {
       return Promise.resolve(true);
     }
     return getConfig('confirm')(message || modifiedCheckMessage || $l('DataSet', 'unsaved_data_confirm'))
-      .then(result => result !== 'cancel');
+      .then(result => result !== false);
   }
 
   /**
@@ -1358,7 +1358,7 @@ export default class DataSet extends EventManager {
       if (
         records.length > 0 &&
         (await this.fireEvent(DataSetEvents.beforeDelete, { dataSet: this, records })) !== false &&
-        (confirmMessage === false || (await getConfig('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_selected_row_confirm'))) !== 'cancel')
+        (confirmMessage === false || (await getConfig('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_selected_row_confirm'))) !== false)
       ) {
         this.remove(records, false);
         const res = await this.pending.add(this.write(this.destroyed, true));
@@ -1436,7 +1436,7 @@ export default class DataSet extends EventManager {
   async deleteAll(confirmMessage?: ReactNode | any) {
     if (
       this.records.length > 0 &&
-      (confirmMessage === false || (await getConfig('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_all_row_confirm'))) !== 'cancel')
+      (confirmMessage === false || (await getConfig('confirm')(confirmMessage && confirmMessage !== true ? confirmMessage : $l('DataSet', 'delete_all_row_confirm'))) !== false)
     ) {
       this.removeAll();
       return this.pending.add(this.write(this.destroyed, true));
@@ -2238,6 +2238,9 @@ Then the query method will be auto invoke.`,
                 }))
               }),
             }],
+            // data: [
+            //   { type: 'or', field: queryFields[0].name, operator: 'equal', value: '' },
+            // ]
           })
         }
       });
