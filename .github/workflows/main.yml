@@ -38,7 +38,7 @@ jobs:
 
       - name: Run a one-line script
         run: |
-          npm install,
-          chmod -R 755 node_modules,
-          npm run compile,
+          npm install
+          chmod -R 755 node_modules
+          npm run compile
           npm run pre-publish
