@@ -30,9 +30,10 @@ jobs:
         uses: actions/setup-node@v2.2.0
         with:
           # Version Spec of the version to use.  Examples: 12.x, 10.15.1, >=10.15.0
+          always-auth: false
           node-version: 12.18.1
+          architecture: x64
           # Target architecture for Node to use. Examples: x86, x64. Will use system architecture by default.
-          registry-url: http://nexus.saas.hand-china.com/repository/yqcloud-npm-group/
           # Optional scope for authenticating against scoped registries
          
 
