@@ -393,7 +393,7 @@ export default class Field {
 
   validatorPropKeys: string[] = [];
 
-  isDynamicPropsComputing: boolean = false;
+  dynamicPropsComputingChains: string[] = [];
 
   computedProps: Map<string, IComputedValue<any>> = new Map();
 
@@ -605,7 +605,7 @@ export default class Field {
           const newComputedProp = computed(() => {
             const computProp = computedProps[propsName];
             if (typeof computProp === 'function') {
-              const prop = this.executeDynamicProps(computProp);
+              const prop = this.executeDynamicProps(computProp, propsName);
               if (prop !== undefined) {
                 this.checkDynamicProp(propsName, prop);
                 return prop;
@@ -643,7 +643,7 @@ export default class Field {
                 }
               }`,
           );
-          const props = this.executeDynamicProps(dynamicProps);
+          const props = this.executeDynamicProps(dynamicProps, propsName);
           if (props && propsName in props) {
             const prop = props[propsName];
             this.checkDynamicProp(propsName, prop);
@@ -652,7 +652,7 @@ export default class Field {
         } else {
           const dynamicProp = dynamicProps[propsName];
           if (typeof dynamicProp === 'function') {
-            const prop = this.executeDynamicProps(dynamicProp);
+            const prop = this.executeDynamicProps(dynamicProp, propsName);
             if (prop !== undefined) {
               this.checkDynamicProp(propsName, prop);
               return prop;
@@ -1144,15 +1144,19 @@ export default class Field {
     }
   }
 
-  private executeDynamicProps(dynamicProps: (DynamicPropsArguments) => any) {
-    const { dataSet, name, record } = this;
-    if (this.isDynamicPropsComputing) {
-      warning(false, `Cycle dynamicProps execution of field<${name}>.`);
-    } else if (dataSet && record) {
-      this.isDynamicPropsComputing = true;
-      const props = dynamicProps({ dataSet, record, name });
-      this.isDynamicPropsComputing = false;
-      return props;
+  private executeDynamicProps(dynamicProps: (DynamicPropsArguments) => any, propsName: string) {
+    const { dataSet, name, record, dynamicPropsComputingChains } = this;
+    if (dynamicPropsComputingChains.includes(propsName)) {
+      warning(false, `Cycle dynamicProps execution of field<${name}>. [${dynamicPropsComputingChains.join(' -> ')} -> ${propsName}]`);
+    } else if (dataSet) {
+      dynamicPropsComputingChains.push(propsName);
+      try {
+        return dynamicProps({ dataSet, record, name });
+      } catch (e) {
+        warning(false, e.message);
+      } finally {
+        dynamicPropsComputingChains.pop();
+      }
     }
   }
 }
